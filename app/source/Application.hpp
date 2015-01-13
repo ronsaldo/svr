@@ -23,6 +23,8 @@ public:
 
 private:
     bool initialize(int argc, const char **argv);
+    bool initializeTextures(int argc, const char **argv);
+
     void mainLoop();
     void shutdown();
 
@@ -35,7 +37,12 @@ private:
     bool isQuitting;
     SDL_Window *window;
     SDL_GLContext glContext;
-    RendererPtr renderer;    
+    RendererPtr renderer;
+
+    Texture2DPtr colorBuffer;
+    Texture1DPtr colorMap;
+
+    int screenWidth, screenHeight;
 };
 
 }

@@ -6,6 +6,8 @@ namespace SVR
 Application::Application()
     : isQuitting(false), window(nullptr), glContext(nullptr)
 {
+    screenWidth = 640;
+    screenHeight = 480;
 }
 
 Application::~Application()
@@ -34,7 +36,7 @@ bool Application::initialize(int argc, const char **argv)
 
     window = SDL_CreateWindow("SVR",
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                640, 480,  SDL_WINDOW_OPENGL);
+                screenWidth, screenHeight,  SDL_WINDOW_OPENGL);
     if(!window)
         fatalError("Failed to create window");
 
@@ -42,11 +44,26 @@ bool Application::initialize(int argc, const char **argv)
     if(!glContext)
         fatalError("Failed to create window");
 
+    // Create the renderer.
     renderer = createRenderer();
     if(!renderer->initialize(argc, argv))
         fatalError("Failed to initialize the renderer");
 
+    // Activate the opengl context.
+    if(SDL_GL_MakeCurrent(window, glContext))
+        fatalError("Failed to active the opengl context");
+
+    if(!initializeTextures(argc, argv))
+        fatalError("Failed to initialize textures");
     return true;
+}
+
+bool Application::initializeTextures(int argc, const char **argv)
+{
+    colorBuffer = renderer->createTexture2D(screenWidth, screenHeight, PixelFormat::RGBA32F);
+    colorBuffer->allocateInDevice();
+
+    return colorBuffer.get();
 }
 
 void Application::shutdown()
@@ -89,10 +106,27 @@ void Application::render()
     if(SDL_GL_MakeCurrent(window, glContext))
         return;
 
+    // Update the screen size.
+    auto extent = glm::vec2(screenWidth, screenHeight);
+    renderer->setScreenSize(extent);
+
     // Clear the window.
     renderer->clearColor(glm::vec4(0.0, 0.0, 0.0, 0.0));
     renderer->clear();
 
+    renderer->setTexture(colorBuffer);
+    renderer->drawRectangle(glm::vec2(0.0, 0.0), extent);
+
+    renderer->setColor(glm::vec4(0.0, 1.0, 0.0, 0.0));
+    renderer->drawLine(glm::vec2(0.0, 200.0), glm::vec2(200.0, 200.0));
+
+    renderer->setColor(glm::vec4(0.0, 0.0, 1.0, 0.0));
+    renderer->drawTriangle(glm::vec2(200.0, 100.0), glm::vec2(400.0, 250.0), glm::vec2(200.0, 400.0));
+
+    renderer->setColor(glm::vec4(1.0, 0.0, 0.0, 0.0));
+    renderer->drawTriangle(glm::vec2(400.0, 100.0), glm::vec2(600.0, 250.0), glm::vec2(400.0, 400.0));
+
+    renderer->flushCommands();
     SDL_GL_SwapWindow(window);
 }
 

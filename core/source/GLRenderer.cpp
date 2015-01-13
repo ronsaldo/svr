@@ -1,199 +1,9 @@
-#define GLM_FORCE_RADIANS
-
-#include <GL/glew.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include "SVR/LoadUtilities.hpp"
-#include "SVR/Logging.hpp"
-#include "SVR/Renderer.hpp"
-#include "SVR/Mesh.hpp"
-#include "SVR/VertexAttributes.hpp"
+#include "GLRenderer.hpp"
 
 namespace SVR
 {
 namespace OpenGL
 {
-
-DECLARE_CLASS(Shader);
-DECLARE_CLASS(Program);
-
-/**
- * Shader
- */
-class Shader
-{
-public:
-    ~Shader();
-
-    static ShaderPtr loadFromFile(const std::string &path, GLenum type);
-
-    GLuint getHandle();
-    void destroy();
-
-private:
-    Shader(GLuint handle);
-
-    GLuint handle;
-};
-
-ShaderPtr Shader::loadFromFile(const std::string &path, GLenum type)
-{
-    // Lod the shader source code.
-    std::vector<char> sourceCode;
-    if(!loadTextFileInto(path, sourceCode))
-        return ShaderPtr();
-
-    // Create and compile the shader.
-    auto shader = glCreateShader(type);
-    const char *sourceCodePtr = &sourceCode[0];
-    glShaderSource(shader, 1, &sourceCodePtr, nullptr);
-    glCompileShader(shader);
-
-    // Check for errors
-    int res;
-    glGetShaderiv(shader, GL_COMPILE_STATUS, &res);
-    if(res != GL_TRUE)
-    {
-        // Get the info log size.
-        int infoLogLength;
-        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-        // Read the info log
-        std::unique_ptr<char[]> infoLog(new char[infoLogLength + 1]);
-        glGetShaderInfoLog(shader, infoLogLength, nullptr, infoLog.get());
-
-        // FIXME: Use a logging function
-        fprintf(stderr, "Failed to compile shader(%s):\n%s\n", path.c_str(), infoLog.get());
-
-        // Delete the shader
-        glDeleteShader(shader);
-        return ShaderPtr();
-    }
-
-    return ShaderPtr(new Shader(shader));
-}
-
-Shader::Shader(GLuint handle)
-    : handle(handle)
-{
-}
-
-Shader::~Shader()
-{
-}
-
-GLuint Shader::getHandle()
-{
-    return handle;
-}
-
-void Shader::destroy()
-{
-    glDeleteShader(handle);
-}
-
-/**
- * Program
- */
-class Program
-{
-public:
-    ~Program();
-
-    static ProgramPtr loadFromFile(const std::string &vertexPath, const std::string &fragmentPath);
-
-    GLuint getHandle();
-    void destroy();
-
-private:
-    static void bindVertexAttributes(GLuint program);
-    Program(GLuint handle, const ShaderPtr &vertexShader, const ShaderPtr &fragmentShader);
-
-    GLuint handle;
-    ShaderPtr vertexShader;
-    ShaderPtr fragmentShader;
-};
-
-Program::Program(GLuint handle, const ShaderPtr &vertexShader, const ShaderPtr &fragmentShader)
-    : handle(handle), vertexShader(vertexShader), fragmentShader(fragmentShader)
-{
-}
-
-Program::~Program()
-{
-}
-
-GLuint Program::getHandle()
-{
-    return handle;
-}
-
-void Program::destroy()
-{
-    glUseProgram(0);
-    glDetachShader(handle, vertexShader->getHandle());
-    glDetachShader(handle, fragmentShader->getHandle());
-    glDeleteProgram(handle);
-    vertexShader->destroy();
-    fragmentShader->destroy();
-}
-
-void Program::bindVertexAttributes(GLuint program)
-{
-    glBindAttribLocation(program, (GLuint)VertexAttributes::Position, "vPosition");
-    glBindAttribLocation(program, (GLuint)VertexAttributes::TexCoord, "vTexCoord");
-    glBindAttribLocation(program, (GLuint)VertexAttributes::Color, "vColor");
-}
-
-ProgramPtr Program::loadFromFile(const std::string &vertexPath, const std::string &fragmentPath)
-{
-    // Load the vertex shader.
-    auto vertexShader = Shader::loadFromFile(vertexPath, GL_VERTEX_SHADER);
-    if(!vertexShader)
-        return ProgramPtr();
-
-    // Load the fragment shader.
-    auto fragmentShader = Shader::loadFromFile(fragmentPath, GL_FRAGMENT_SHADER);
-    if(!fragmentShader)
-    {
-        vertexShader->destroy();
-        return ProgramPtr();
-    }
-
-    // Create and link the program
-    auto program = glCreateProgram();
-    glAttachShader(program, vertexShader->getHandle());
-    glAttachShader(program, fragmentShader->getHandle());
-    bindVertexAttributes(program);
-    glLinkProgram(program);
-
-    // Check for errors
-    int res;
-    glGetProgramiv(program, GL_LINK_STATUS, &res);
-    if(res != GL_TRUE)
-    {
-        // Get the info log size.
-        int infoLogLength;
-        glGetProgramiv(program, GL_INFO_LOG_LENGTH, &infoLogLength);
-
-        // Read the info log
-        std::unique_ptr<char[]> infoLog(new char[infoLogLength + 1]);
-        glGetProgramInfoLog(program, infoLogLength, nullptr, infoLog.get());
-
-        // FIXME: Use a logging function
-        fprintf(stderr, "Failed to link program(%s ; %s):\n%s\n", vertexPath.c_str(), fragmentPath.c_str(), infoLog.get());
-
-        // Delete the program and the shaders.
-        glDetachShader(program, vertexShader->getHandle());
-        glDetachShader(program, fragmentShader->getHandle());
-        glDeleteProgram(program);
-        vertexShader->destroy();
-        fragmentShader->destroy();
-        return ProgramPtr();
-    }
-
-    return ProgramPtr(new Program(program, vertexShader, fragmentShader));
-}
 
 /**
  * The OpenGL renderer
@@ -212,24 +22,50 @@ public:
     virtual void clearColor(const glm::vec4 &color);
     virtual void clear();
 
+    virtual void setTexture(const Texture2DPtr &texture);
     virtual void setColor(const glm::vec4 &color);
+
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end);
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
+    virtual void drawRectangle(const glm::vec2 &min, const glm::vec2 &max);
 
     virtual void flushCommands();
 
+    virtual Texture1DPtr createTexture1D(int width, PixelFormat pixelFormat);
+    virtual Texture2DPtr createTexture2D(int width, int height, PixelFormat pixelFormat);
+
 private:
     bool loadPrograms();
+    void create2DCanvas();
+
+    void useProgram(const ProgramPtr &program);
+    void useMaterial(const Material &material);
+    void drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, GLenum elementType);
+
+    void useSolidColorMaterial(const Material &material);
+    void useTexturedMaterial(const Material &material);
+    void useLinearGradientMaterial(const Material &material);
+
+    ProgramPtr programForMaterialType(MaterialType type);
+
+    Vertex2D vertexForPosition(const glm::vec2 &position);
 
     ProgramPtr colorProgram;
     ProgramPtr texturedProgram;
+    ProgramPtr linearGradientProgram;
 
-    Mesh2D mesh;
+    LocalMesh2DBuilder builder;
+    BufferObjectPtr vertexBuffer;
+    BufferObjectPtr indexBuffer;
 
     // Render state
     glm::vec2 screenSize;
     glm::mat4 projectionMatrix;
+
+    glm::mat3 modelViewMatrix;
+    glm::mat3 textureMatrix;
     glm::vec4 currentColor;
+    Material currentMaterial;
 };
 
 GLRenderer::GLRenderer()
@@ -252,7 +88,15 @@ bool GLRenderer::initialize(int argc, const char **argv)
     if(!loadPrograms())
         return false;
 
+    create2DCanvas();
+
     return true;
+}
+
+void GLRenderer::create2DCanvas()
+{
+    vertexBuffer = BufferObject::create(GL_ARRAY_BUFFER, GL_STREAM_DRAW);
+    indexBuffer = BufferObject::create(GL_ELEMENT_ARRAY_BUFFER, GL_STREAM_DRAW);
 }
 
 void GLRenderer::shutdown()
@@ -263,14 +107,15 @@ bool GLRenderer::loadPrograms()
 {
     colorProgram = Program::loadFromFile("data/shaders/color.glslv", "data/shaders/color.glslf");
     texturedProgram = Program::loadFromFile("data/shaders/textured.glslv", "data/shaders/textured.glslf");
-
-    return colorProgram && texturedProgram;
+    linearGradientProgram = Program::loadFromFile("data/shaders/linearGradient.glslv", "data/shaders/linearGradient.glslf");
+    return colorProgram && texturedProgram && linearGradientProgram;
 }
 
 void GLRenderer::setScreenSize(const glm::vec2 &newScreenSize)
 {
     screenSize = newScreenSize;
     projectionMatrix = glm::ortho(0.0f, screenSize.x, 0.0f, screenSize.y, -1.0f, 1.0f);
+    glViewport(0, 0, int(screenSize.x), int(screenSize.y));
 }
 
 void GLRenderer::clearColor(const glm::vec4 &color)
@@ -285,22 +130,194 @@ void GLRenderer::clear()
 
 void GLRenderer::setColor(const glm::vec4 &color)
 {
+    currentMaterial = Material(MaterialType::SolidColor);
     currentColor = color;
+}
+
+void GLRenderer::setTexture(const Texture2DPtr &texture)
+{
+    currentMaterial = Material(MaterialType::Textured);
+    currentMaterial.texture = texture;
+    currentColor = glm::vec4(1.0, 1.0, 1.0, 1.0);
 }
 
 void GLRenderer::drawLine(const glm::vec2 &start, const glm::vec2 &end)
 {
-    // TODO:
+    builder.beginSubMesh(PrimitiveMode::Lines, currentMaterial);
+    builder.addVertex(vertexForPosition(start));
+    builder.addVertex(vertexForPosition(end));
+    builder.addIndex(0);
+    builder.addIndex(1);
+    builder.endSubMesh();
 }
 
 void GLRenderer::drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c)
 {
-    // TODO: 
+    builder.beginSubMesh(PrimitiveMode::Triangles, currentMaterial);
+    builder.addVertex(vertexForPosition(a));
+    builder.addVertex(vertexForPosition(b));
+    builder.addVertex(vertexForPosition(c));
+    builder.addIndex(0);
+    builder.addIndex(1);
+    builder.addIndex(2);
+    builder.endSubMesh();
+}
+
+void GLRenderer::drawRectangle(const glm::vec2 &min, const glm::vec2 &max)
+{
+    auto bottomLeft = min;
+    auto topLeft = glm::vec2(min.x, max.y);
+    auto topRight = max;
+    auto bottomRight = glm::vec2(max.x, min.y);
+
+    builder.beginSubMesh(PrimitiveMode::Triangles, currentMaterial);
+    builder.addVertex(vertexForPosition(bottomLeft));
+    builder.addVertex(vertexForPosition(topLeft));
+    builder.addVertex(vertexForPosition(topRight));
+    builder.addVertex(vertexForPosition(bottomRight));
+
+    builder.addIndex(0);
+    builder.addIndex(1);
+    builder.addIndex(2);
+
+    builder.addIndex(2);
+    builder.addIndex(3);
+    builder.addIndex(0);
+    builder.endSubMesh();
+}
+
+Vertex2D GLRenderer::vertexForPosition(const glm::vec2 &position)
+{
+    glm::vec3 transformedPosition = modelViewMatrix * glm::vec3(position, 1.0);
+    glm::vec3 transformedTexcoord = textureMatrix * glm::vec3(position, 1.0);
+
+    Vertex2D vertex;
+    vertex.position = glm::vec2(transformedPosition);
+    vertex.color = currentColor;
+    vertex.texcoord = glm::vec2(transformedTexcoord);
+    return vertex;
 }
 
 void GLRenderer::flushCommands()
 {
-    // TODO:
+    typedef Vertex2D VertexType;
+
+    auto &mesh = builder.localMesh;
+    if(mesh.vertices.empty() || mesh.indices.empty() || mesh.submeshes.empty())
+        return;
+
+    // Upload the vertices and the indices.
+    vertexBuffer->uploadData(mesh.getVerticesByteSize(), &mesh.vertices[0]);
+    indexBuffer->uploadData(mesh.getIndicesByteSize(), &mesh.indices[0]);
+
+    // Enable the vertex attributes
+    glEnableVertexAttribArray((GLuint)VertexAttribute::Position);
+    glVertexAttribPointer((GLuint)VertexAttribute::Position, 2, GL_FLOAT, GL_FALSE, sizeof(VertexType),
+            reinterpret_cast<void*> (offsetof(VertexType, position)));
+
+    glEnableVertexAttribArray((GLuint)VertexAttribute::TexCoord);
+    glVertexAttribPointer((GLuint)VertexAttribute::TexCoord, 2, GL_FLOAT, GL_FALSE, sizeof(VertexType),
+            reinterpret_cast<void*> (offsetof(VertexType, texcoord)));
+
+    glEnableVertexAttribArray((GLuint)VertexAttribute::Color);
+    glVertexAttribPointer((GLuint)VertexAttribute::Color, 4, GL_FLOAT, GL_FALSE, sizeof(VertexType),
+            reinterpret_cast<void*> (offsetof(VertexType, color)));
+
+    // Draw the submeshes
+    drawSubMeshes(mesh.submeshes, 2, GL_UNSIGNED_SHORT);
+
+    // Clear the canvas.
+    builder.clear();
+}
+
+Texture1DPtr GLRenderer::createTexture1D(int width, PixelFormat pixelFormat)
+{
+    return Texture1DPtr();
+}
+
+Texture2DPtr GLRenderer::createTexture2D(int width, int height, PixelFormat pixelFormat)
+{
+    return GLTexture2D::create(width, height, pixelFormat);
+}
+
+void GLRenderer::useProgram(const ProgramPtr &program)
+{
+    // Use the program.
+    glUseProgram(program->getHandle());
+
+    // Set the program attributes.
+    program->uniformMat4("projectionMatrix", projectionMatrix);
+}
+
+void GLRenderer::useMaterial(const Material &material)
+{
+    switch(material.type)
+    {
+    case MaterialType::SolidColor:
+        useSolidColorMaterial(material);
+        break;
+    case MaterialType::Textured:
+        useTexturedMaterial(material);
+        break;
+    case MaterialType::LinearGradient:
+        useLinearGradientMaterial(material);
+        break;
+    default:
+        abort();
+    }
+
+}
+
+void GLRenderer::useSolidColorMaterial(const Material &material)
+{
+    useProgram(colorProgram);
+}
+
+void GLRenderer::useTexturedMaterial(const Material &material)
+{
+    useProgram(texturedProgram);
+
+    auto glTexture = std::static_pointer_cast<GLTexture2D> (material.texture);
+    glTexture->bind();
+}
+
+void GLRenderer::useLinearGradientMaterial(const Material &material)
+{
+    useProgram(linearGradientProgram);
+
+    //auto glTexture = std::static_pointer_cast<GLTexture1D> (material.texture);
+    //glTexture->bind();
+}
+
+ProgramPtr GLRenderer::programForMaterialType(MaterialType type)
+{
+    switch(type)
+    {
+    case MaterialType::SolidColor:
+        return colorProgram;
+    case MaterialType::Textured:
+        return texturedProgram;
+    case MaterialType::LinearGradient:
+        return linearGradientProgram;
+    default:
+        abort();
+    }
+}
+
+void GLRenderer::drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, GLenum elementType)
+{
+    // TODO: Select the proper program.
+    for(auto &submesh: submeshes)
+    {
+        useMaterial(submesh.material);
+
+        auto mode = mapPrimitiveMode(submesh.primitiveMode);
+        size_t startIndexOffset = elementSize * submesh.startIndex;
+        glDrawRangeElements(mode, submesh.startVertex, submesh.endVertex,
+                            submesh.indexCount, elementType,
+                            reinterpret_cast<void*> (startIndexOffset));
+
+    }
 }
 
 } // namespace OpenGL
