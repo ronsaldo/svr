@@ -14,6 +14,7 @@
 #include "SVR/ComputePlatform.hpp"
 #include "SVR/LoadUtilities.hpp"
 #include "SVR/Logging.hpp"
+#include "SVR/Texture.hpp"
 
 #if defined (__APPLE__) || defined(MACOSX)
     static const char* CL_GL_SHARING_EXT = "cl_APPLE_gl_sharing";
@@ -28,7 +29,7 @@ DECLARE_CLASS(CLComputeKernel);
 /**
  * CLComputeDevice
  */
-class CLComputeDevice
+class CLComputeDevice: public ComputeDevice
 {
 public:
     CLComputeDevice(cl_context context, cl_device_id device);
@@ -38,6 +39,7 @@ public:
     void destroy();
 
     cl_device_id getHandle();
+    cl_command_queue getCommandQueue();
 
 private:
     cl_context context;
@@ -52,7 +54,6 @@ CLComputeDevice::CLComputeDevice(cl_context context, cl_device_id device)
 
 CLComputeDevice::~CLComputeDevice()
 {
-    destroy();
 }
 
 bool CLComputeDevice::initialize()
@@ -77,6 +78,66 @@ void CLComputeDevice::destroy()
 cl_device_id CLComputeDevice::getHandle()
 {
     return device;
+}
+
+cl_command_queue CLComputeDevice::getCommandQueue()
+{
+    return commandQueue;
+}
+
+/**
+ * OpenCL compute buffer
+ */
+class CLComputeBuffer: public ComputeBuffer
+{
+public:
+    CLComputeBuffer(cl_context context, cl_mem mem);
+    ~CLComputeBuffer();
+
+    virtual void destroy();
+
+    virtual void acquireFromRenderer(ComputeDevice *device);
+    virtual void releaseFromRenderer(ComputeDevice *device);
+
+    cl_mem getMem();
+
+private:
+    cl_context context;
+    cl_mem mem;
+};
+
+CLComputeBuffer::CLComputeBuffer(cl_context context, cl_mem mem)
+    : context(context), mem(mem)
+{
+}
+
+CLComputeBuffer::~CLComputeBuffer()
+{
+    destroy();
+}
+
+void CLComputeBuffer::destroy()
+{
+    if(mem)
+        clReleaseMemObject(mem);
+    mem = nullptr;
+}
+
+void CLComputeBuffer::acquireFromRenderer(ComputeDevice *device)
+{
+    auto clDevice = static_cast<CLComputeDevice*> (device);
+    clEnqueueAcquireGLObjects(clDevice->getCommandQueue(), 1, &mem, 0, 0, 0);
+}
+
+void CLComputeBuffer::releaseFromRenderer(ComputeDevice *device)
+{
+    auto clDevice = static_cast<CLComputeDevice*> (device);
+    clEnqueueReleaseGLObjects(clDevice->getCommandQueue(), 1, &mem, 0, 0, 0);
+}
+
+cl_mem CLComputeBuffer::getMem()
+{
+    return mem;
 }
 
 /**
@@ -199,6 +260,9 @@ public:
     virtual void shutdown();
 
     virtual ComputeProgramPtr loadComputeProgramFromFile(const std::string &path);
+
+    virtual ComputeBufferPtr createImageFromTexture1D(const Texture1DPtr &texture);
+    virtual ComputeBufferPtr createImageFromTexture2D(const Texture2DPtr &texture);
 
 private:
     bool createContext();
@@ -373,6 +437,26 @@ ComputeProgramPtr CLComputePlatform::loadComputeProgramFromFile(const std::strin
     }
 
     return std::make_shared<CLComputeProgram> (context, program);
+}
+
+ComputeBufferPtr CLComputePlatform::createImageFromTexture1D(const Texture1DPtr &texture)
+{
+    return ComputeBufferPtr();
+}
+
+ComputeBufferPtr CLComputePlatform::createImageFromTexture2D(const Texture2DPtr &texture)
+{
+    
+    auto handle = (GLuint)(size_t)texture->getHandle();
+    cl_int err;
+    auto image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, handle, &err);
+    if(!image)
+    {
+        logError("Failed to create image from OpenGL texture 2D");
+        return ComputeBufferPtr();
+    }
+
+    return std::make_shared<CLComputeBuffer> (context, image);
 }
 
 } // namespace SVR

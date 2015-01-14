@@ -55,6 +55,14 @@ bool Application::initialize(int argc, const char **argv)
 
     if(!initializeTextures(argc, argv))
         fatalError("Failed to initialize textures");
+
+    // Create the compute platform.
+    computePlatform = createComputePlatform();
+    if(!computePlatform->initialize(argc, argv))
+        fatalError("Failed to initialize compute platform");
+
+    if(!initializeComputation())
+        fatalError("Failed to initialize computation");
     return true;
 }
 
@@ -66,8 +74,33 @@ bool Application::initializeTextures(int argc, const char **argv)
     return colorBuffer.get();
 }
 
+bool Application::initializeComputation()
+{
+    // Raycast program
+    raycastProgram = computePlatform->loadComputeProgramFromFile("data/kernels/raycast.cl");
+    raycastProgram->build();
+
+    // Cube mapping float
+    cubeMappingsFloatProgram = computePlatform->loadComputeProgramFromFile("data/kernels/cubeMappingsFloat.cl");
+    cubeMappingsFloatProgram->build();
+
+    // Cube mapping double
+    cubeMappingsDoubleProgram = computePlatform->loadComputeProgramFromFile("data/kernels/cubeMappingsDouble.cl");
+    cubeMappingsDoubleProgram->build();
+
+    computeColorBuffer = computePlatform->createImageFromTexture2D(colorBuffer);
+
+    return true;
+}
+
 void Application::shutdown()
 {
+    computeColorBuffer->destroy();
+    raycastProgram->destroy();
+    cubeMappingsFloatProgram->destroy();
+    cubeMappingsDoubleProgram->destroy();
+
+    computePlatform->shutdown();
     renderer->shutdown();
 
     SDL_GL_DeleteContext(glContext);

@@ -57,13 +57,25 @@ endif()
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 
+# Find OpenCL
+find_library(OpenCL_LIB OpenCL)
+if(NOT OpenCL_LIB)
+    message(SEND_ERROR "Failed to find OpenCL library")
+endif()
+
+find_path(OpenCL_INCLUDE_DIR CL/cl.h
+         PATH_SUFFIXES CL)
+if(NOT OpenCL_INCLUDE_DIR)
+    message(SEND_ERROR "Failed to find OpenCL headers")
+endif()
+
 # Use GLM, rapidxml
 include_directories(
 "${PROJECT_SOURCE_DIR}/thirdparty/glm"
 "${PROJECT_SOURCE_DIR}/thirdparty/rapidxml"
 )
 
-set(SVR_DEP_LIBS ${ZLIB_LIBRARIES} ${GLEW_LIB} ${OPENGL_gl_LIBRARY} ${FREETYPE_LIBRARIES})
+set(SVR_DEP_LIBS ${ZLIB_LIBRARIES} ${OpenCL_LIB} ${GLEW_LIB} ${OPENGL_gl_LIBRARY} ${FREETYPE_LIBRARIES})
 
 # Use pkg-config.
 find_package(PkgConfig)

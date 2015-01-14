@@ -5,6 +5,7 @@
 #include <SDL_main.h>
 #include "SVR/Logging.hpp"
 #include "SVR/Renderer.hpp"
+#include "SVR/ComputePlatform.hpp"
 
 namespace SVR
 {
@@ -24,6 +25,7 @@ public:
 private:
     bool initialize(int argc, const char **argv);
     bool initializeTextures(int argc, const char **argv);
+    bool initializeComputation();
 
     void mainLoop();
     void shutdown();
@@ -43,6 +45,15 @@ private:
     Texture1DPtr colorMap;
 
     int screenWidth, screenHeight;
+
+    // Compute platform programs and buffers.
+    ComputePlatformPtr computePlatform;
+
+    ComputeProgramPtr raycastProgram;
+    ComputeProgramPtr cubeMappingsFloatProgram;
+    ComputeProgramPtr cubeMappingsDoubleProgram;
+
+    ComputeBufferPtr computeColorBuffer;
 };
 
 }
