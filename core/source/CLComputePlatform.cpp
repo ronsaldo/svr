@@ -8,6 +8,8 @@
 #include <GL/glx.h>
 #endif
 
+#include <string.h>
+
 #include <map>
 #include <vector>
 
@@ -26,6 +28,64 @@ namespace SVR
 {
 DECLARE_CLASS(CLComputeKernel);
 
+inline cl_channel_order computeMapPixelFormatOrder(PixelFormat format)
+{
+    switch(format)
+    {
+    case PixelFormat::L8:
+        return CL_LUMINANCE;
+    case PixelFormat::I8:
+        return CL_INTENSITY;
+    case PixelFormat::R8:
+        return CL_R;
+    case PixelFormat::RG8:
+        return CL_RG;
+    case PixelFormat::RGB8:
+        return CL_RGB;
+    case PixelFormat::RGBA8:
+        return CL_RGBA;
+
+    case PixelFormat::R32F:
+        return CL_R;
+    case PixelFormat::RG32F:
+        return CL_RG;
+    case PixelFormat::RGBA32F:
+        return CL_RGBA;
+    default:
+        abort();
+    }
+}
+
+inline cl_channel_type computeMapPixelFormatDataType(PixelFormat format)
+{
+    switch(format)
+    {
+    case PixelFormat::L8:
+    case PixelFormat::I8:
+    case PixelFormat::R8:
+    case PixelFormat::RG8:
+    case PixelFormat::RGB8:
+    case PixelFormat::RGBA8:
+        return CL_UNORM_INT8;
+
+    case PixelFormat::R32F:
+    case PixelFormat::RG32F:
+    case PixelFormat::RGBA32F:
+        return CL_FLOAT;
+
+    default:
+        abort();
+    }
+}
+
+inline cl_image_format computeMapPixelFormat(PixelFormat format)
+{
+    cl_image_format clformat;
+    clformat.image_channel_order = computeMapPixelFormatOrder(format);
+    clformat.image_channel_data_type = computeMapPixelFormatDataType(format);
+    return clformat;
+}
+
 /**
  * CLComputeDevice
  */
@@ -40,6 +100,13 @@ public:
 
     cl_device_id getHandle();
     cl_command_queue getCommandQueue();
+
+    virtual void beginCompute();
+    virtual void endCompute();
+
+    virtual void runGlobalKernel1D(const ComputeKernelPtr &kernel, size_t globalWorkSize);
+    virtual void runGlobalKernel2D(const ComputeKernelPtr &kernel, size_t globalWorkWidth, size_t globalWorkHeight);
+    virtual void runGlobalKernel2D(const ComputeKernelPtr &kernel, size_t globalWorkWidth, size_t globalWorkHeight, size_t globalWorkDepth);
 
 private:
     cl_context context;
@@ -73,6 +140,15 @@ void CLComputeDevice::destroy()
     if(commandQueue)
         clReleaseCommandQueue(commandQueue);
     commandQueue = nullptr;
+}
+
+void CLComputeDevice::beginCompute()
+{
+}
+
+void CLComputeDevice::endCompute()
+{
+    clFlush(commandQueue);
 }
 
 cl_device_id CLComputeDevice::getHandle()
@@ -151,6 +227,18 @@ public:
 
     virtual void destroy();
 
+    virtual void setBufferArg(int arg, const ComputeBufferPtr &buffer);
+
+    virtual void setIntArg(int arg, int value);
+
+    virtual void setFloatArg(int arg, float value);
+    virtual void setFloat2Arg(int arg, const glm::vec2 &value);
+    virtual void setFloat4Arg(int arg, const glm::vec4 &value);
+
+    virtual void setDoubleArg(int arg, double value);
+    virtual void setDouble2Arg(int arg, const glm::dvec2 &value);
+    virtual void setDouble4Arg(int arg, const glm::dvec4 &value);
+
     cl_kernel getKernel();
 
 private:
@@ -180,13 +268,84 @@ cl_kernel CLComputeKernel::getKernel()
     return kernel;
 }
 
+void CLComputeKernel::setBufferArg(int arg, const ComputeBufferPtr &buffer)
+{
+    auto clBuffer = std::static_pointer_cast<CLComputeBuffer> (buffer);
+    auto clBufferHandle = clBuffer->getMem();
+    clSetKernelArg(kernel, arg, sizeof(clBufferHandle), &clBufferHandle);
+}
+
+void CLComputeKernel::setIntArg(int arg, int value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeKernel::setFloatArg(int arg, float value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeKernel::setFloat2Arg(int arg, const glm::vec2 &value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeKernel::setFloat4Arg(int arg, const glm::vec4 &value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeKernel::setDoubleArg(int arg, double value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeKernel::setDouble2Arg(int arg, const glm::dvec2 &value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeKernel::setDouble4Arg(int arg, const glm::dvec4 &value)
+{
+    clSetKernelArg(kernel, arg, sizeof(value), &value);
+}
+
+void CLComputeDevice::runGlobalKernel1D(const ComputeKernelPtr &kernel, size_t globalWorkSize)
+{
+    auto clKernel = std::static_pointer_cast<CLComputeKernel> (kernel);
+    clEnqueueNDRangeKernel(commandQueue, clKernel->getKernel(), 1, nullptr, &globalWorkSize, nullptr, 0, nullptr, nullptr);
+}
+
+void CLComputeDevice::runGlobalKernel2D(const ComputeKernelPtr &kernel, size_t globalWorkWidth, size_t globalWorkHeight)
+{
+    size_t sizes[] = {
+        globalWorkWidth,
+        globalWorkHeight
+    };
+
+    auto clKernel = std::static_pointer_cast<CLComputeKernel> (kernel);
+    clEnqueueNDRangeKernel(commandQueue, clKernel->getKernel(), 2, nullptr, sizes, nullptr, 0, nullptr, nullptr);
+}
+
+void CLComputeDevice::runGlobalKernel2D(const ComputeKernelPtr &kernel, size_t globalWorkWidth, size_t globalWorkHeight, size_t globalWorkDepth)
+{
+    size_t sizes[] = {
+        globalWorkWidth,
+        globalWorkHeight,
+        globalWorkDepth,
+    };
+
+    auto clKernel = std::static_pointer_cast<CLComputeKernel> (kernel);
+    clEnqueueNDRangeKernel(commandQueue, clKernel->getKernel(), 2, nullptr, sizes, nullptr, 0, nullptr, nullptr);
+}
+
 /**
  * OpenCL compute program.
  */
 class CLComputeProgram: public ComputeProgram
 {
 public:
-    CLComputeProgram(cl_context context, cl_program program);
+    CLComputeProgram(cl_context context, CLComputeDevice *device, cl_program program, const std::string &name);
     ~CLComputeProgram();
 
     virtual bool build(const std::string &options);
@@ -198,12 +357,14 @@ public:
 
 private:
     cl_context context;
+    CLComputeDevice *device;
     cl_program program;
+    std::string name;
     std::map<std::string, CLComputeKernelPtr> kernels;
 };
 
-CLComputeProgram::CLComputeProgram(cl_context context, cl_program program)
-    : context(context), program(program)
+CLComputeProgram::CLComputeProgram(cl_context context, CLComputeDevice *device, cl_program program, const std::string &name)
+    : context(context), device(device), program(program), name(name)
 {
 }
 
@@ -214,13 +375,29 @@ CLComputeProgram::~CLComputeProgram()
 
 bool CLComputeProgram::build(const std::string &options)
 {
+    char buffer[4096];
+
+    cl_device_id dev = device->getHandle();
+    auto err = clBuildProgram(program, 1, &dev, options.c_str(), nullptr, nullptr);
+    if(err != 0)
+    {
+        logError("Failed to build program");
+        clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, sizeof(buffer)-1, buffer, nullptr);
+        fprintf(stderr, "Build log for '%s':\n%s\n", name.c_str(), buffer);
+        return false;
+    }
+
     return true;
 }
 
 void CLComputeProgram::destroy()
 {
+    for (auto &nameKernel: kernels)
+        nameKernel.second->destroy();
+
     if(program)
         clReleaseProgram(program);
+
     program = nullptr;
 }
 
@@ -230,8 +407,9 @@ ComputeKernelPtr CLComputeProgram::createKernel(const std::string &name)
     if(it != kernels.end())
         return it->second;
 
-    auto kernel = clCreateKernel(program, name.c_str(), nullptr);
-    if(!kernel)
+    cl_int err;
+    auto kernel = clCreateKernel(program, name.c_str(), &err);
+    if(err)
     {
         logError("Failed to create kernel");
         return ComputeKernelPtr();
@@ -261,8 +439,18 @@ public:
 
     virtual ComputeProgramPtr loadComputeProgramFromFile(const std::string &path);
 
+    virtual ComputeBufferPtr createImage1D(PixelFormat format, size_t width, const char *data);
+    virtual ComputeBufferPtr createImage2D(PixelFormat format, size_t width, size_t height, size_t rowPitch, const char *data);
+    virtual ComputeBufferPtr createImage3D(PixelFormat format, size_t width, size_t height, size_t depth, size_t rowPitch, size_t slicePitch, const char *data);
+
     virtual ComputeBufferPtr createImageFromTexture1D(const Texture1DPtr &texture);
     virtual ComputeBufferPtr createImageFromTexture2D(const Texture2DPtr &texture);
+
+    virtual size_t getComputeDeviceCount() const;
+    virtual ComputeDevice *getComputeDevice(size_t index);
+
+    virtual void beginCompute();
+    virtual void endCompute();
 
 private:
     bool createContext();
@@ -277,6 +465,7 @@ private:
     std::string extensionString;
 
     std::vector<CLComputeDevice> devices;
+    std::vector<cl_device_id> devicesIDs;
 };
 
 ComputePlatformPtr createComputePlatform()
@@ -403,6 +592,7 @@ bool CLComputePlatform::createContext()
     }
 
     // Create the device wrappers.
+    this->devicesIDs = std::vector<cl_device_id> (devices,  devices + numdevices);
     this->devices.reserve(numdevices);
     for(int i = 0; i < numdevices; ++i)
         this->devices.push_back(CLComputeDevice(context, devices[i]));
@@ -436,12 +626,105 @@ ComputeProgramPtr CLComputePlatform::loadComputeProgramFromFile(const std::strin
         return ComputeProgramPtr();
     }
 
-    return std::make_shared<CLComputeProgram> (context, program);
+    return std::make_shared<CLComputeProgram> (context, &devices[0], program, path);
+}
+
+ComputeBufferPtr CLComputePlatform::createImage1D(PixelFormat format, size_t width, const char *data)
+{
+    auto imageFormat = computeMapPixelFormat(format);
+    cl_image_desc desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.image_type = CL_MEM_OBJECT_IMAGE1D;
+    desc.image_width = width;
+    desc.image_height = 1;
+    desc.image_depth = 1;
+    desc.image_array_size = 1;
+    desc.image_row_pitch = 0;
+    desc.image_slice_pitch = 0;
+
+    cl_mem_flags flags = CL_MEM_READ_WRITE;
+    if(data)
+        flags |=  CL_MEM_COPY_HOST_PTR;
+
+    cl_int error;
+    auto buffer = clCreateImage(context, flags, &imageFormat, &desc, (void*)data, &error);
+    if(!buffer || error)
+    {
+        logError("Failed to allocate 1D image buffer");
+        return ComputeBufferPtr();
+    }
+
+    return std::make_shared<CLComputeBuffer> (context, buffer);
+}
+
+ComputeBufferPtr CLComputePlatform::createImage2D(PixelFormat format, size_t width, size_t height, size_t rowPitch, const char *data)
+{
+    auto imageFormat = computeMapPixelFormat(format);
+    cl_image_desc desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.image_type = CL_MEM_OBJECT_IMAGE1D;
+    desc.image_width = width;
+    desc.image_height = height;
+    desc.image_depth = 1;
+    desc.image_array_size = 1;
+    desc.image_row_pitch = rowPitch;
+    desc.image_slice_pitch = 0;
+
+    cl_mem_flags flags = CL_MEM_READ_WRITE;
+    if(data)
+        flags |=  CL_MEM_COPY_HOST_PTR;
+
+    cl_int error;
+    auto buffer = clCreateImage(context, flags, &imageFormat, &desc, (void*)data, &error);
+    if(!buffer || error)
+    {
+        logError("Failed to allocate 2D image buffer");
+        return ComputeBufferPtr();
+    }
+
+    return std::make_shared<CLComputeBuffer> (context, buffer);
+}
+
+ComputeBufferPtr CLComputePlatform::createImage3D(PixelFormat format, size_t width, size_t height, size_t depth, size_t rowPitch, size_t slicePitch, const char *data)
+{
+    auto imageFormat = computeMapPixelFormat(format);
+    cl_image_desc desc;
+    memset(&desc, 0, sizeof(desc));
+    desc.image_type = CL_MEM_OBJECT_IMAGE3D;
+    desc.image_width = width;
+    desc.image_height = height;
+    desc.image_depth = depth;
+    desc.image_array_size = 1;
+    desc.image_row_pitch = rowPitch;
+    desc.image_slice_pitch = slicePitch;
+
+    cl_mem_flags flags = CL_MEM_READ_WRITE;
+    if(data)
+        flags |=  CL_MEM_COPY_HOST_PTR;
+
+    cl_int error;
+    auto buffer = clCreateImage(context, flags, &imageFormat, &desc, (void*)data, &error);
+    if(!buffer || error)
+    {
+        logError("Failed to allocate 3D image buffer");
+        return ComputeBufferPtr();
+    }
+
+    return std::make_shared<CLComputeBuffer> (context, buffer);
 }
 
 ComputeBufferPtr CLComputePlatform::createImageFromTexture1D(const Texture1DPtr &texture)
 {
-    return ComputeBufferPtr();
+    auto handle = (GLuint)(size_t)texture->getHandle();
+    cl_int err;
+    auto image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_1D, 0, handle, &err);
+    if(!image)
+    {
+        logError("Failed to create image from OpenGL texture 1D");
+        return ComputeBufferPtr();
+    }
+
+    return std::make_shared<CLComputeBuffer> (context, image);
 }
 
 ComputeBufferPtr CLComputePlatform::createImageFromTexture2D(const Texture2DPtr &texture)
@@ -457,6 +740,28 @@ ComputeBufferPtr CLComputePlatform::createImageFromTexture2D(const Texture2DPtr 
     }
 
     return std::make_shared<CLComputeBuffer> (context, image);
+}
+
+size_t CLComputePlatform::getComputeDeviceCount() const
+{
+    return devices.size();
+}
+
+ComputeDevice *CLComputePlatform::getComputeDevice(size_t index)
+{
+    return &devices[index];
+}
+
+void CLComputePlatform::beginCompute()
+{
+    for(auto &device : devices)
+        device.beginCompute();
+}
+
+void CLComputePlatform::endCompute()
+{
+    for(auto &device : devices)
+        device.endCompute();
 }
 
 } // namespace SVR

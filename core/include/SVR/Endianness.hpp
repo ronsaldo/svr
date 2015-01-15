@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-namespace ImageMapping
+namespace SVR
 {
 namespace detail
 {

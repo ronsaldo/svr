@@ -34,10 +34,14 @@ public:
     virtual Texture1DPtr createTexture1D(int width, PixelFormat pixelFormat);
     virtual Texture2DPtr createTexture2D(int width, int height, PixelFormat pixelFormat);
 
+    virtual void beginCompute();
+    virtual void endCompute();
+
 private:
     bool loadPrograms();
     void create2DCanvas();
 
+    void updateTextureMatrix();
     void useProgram(const ProgramPtr &program);
     void useMaterial(const Material &material);
     void drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, GLenum elementType);
@@ -64,6 +68,8 @@ private:
 
     glm::mat3 modelViewMatrix;
     glm::mat3 textureMatrix;
+    glm::mat3 textureTransformMatrix;
+    glm::mat3 textureCoordinateMatrix;
     glm::vec4 currentColor;
     Material currentMaterial;
 };
@@ -111,6 +117,11 @@ bool GLRenderer::loadPrograms()
     return colorProgram && texturedProgram && linearGradientProgram;
 }
 
+void GLRenderer::updateTextureMatrix()
+{
+    textureMatrix = textureCoordinateMatrix * textureTransformMatrix;
+}
+
 void GLRenderer::setScreenSize(const glm::vec2 &newScreenSize)
 {
     screenSize = newScreenSize;
@@ -139,6 +150,11 @@ void GLRenderer::setTexture(const Texture2DPtr &texture)
     currentMaterial = Material(MaterialType::Textured);
     currentMaterial.texture = texture;
     currentColor = glm::vec4(1.0, 1.0, 1.0, 1.0);
+
+    textureCoordinateMatrix = glm::mat3();
+    textureCoordinateMatrix[0][0] = 1.0 / texture->getWidth();
+    textureCoordinateMatrix[1][1] = 1.0 / texture->getHeight();
+    updateTextureMatrix();
 }
 
 void GLRenderer::drawLine(const glm::vec2 &start, const glm::vec2 &end)
@@ -232,7 +248,7 @@ void GLRenderer::flushCommands()
 
 Texture1DPtr GLRenderer::createTexture1D(int width, PixelFormat pixelFormat)
 {
-    return Texture1DPtr();
+    return GLTexture1D::create(width, pixelFormat);
 }
 
 Texture2DPtr GLRenderer::createTexture2D(int width, int height, PixelFormat pixelFormat)
@@ -319,6 +335,16 @@ void GLRenderer::drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, G
 
     }
 }
+
+void GLRenderer::beginCompute()
+{
+    glFlush();
+}
+
+void GLRenderer::endCompute()
+{
+}
+
 
 } // namespace OpenGL
 

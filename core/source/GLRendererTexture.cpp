@@ -103,6 +103,100 @@ inline GLenum mapType(PixelFormat pixelFormat)
     }
 }
 
+GLTexture1D::GLTexture1D(GLuint handle, int width,PixelFormat pixelFormat)
+    : handle(handle), width(width), pixelFormat(pixelFormat)
+{
+    magnificationFilter = TextureFilter::Linear;
+    minificationFilter = TextureFilter::Linear;
+    update();
+}
+
+GLTexture1D::~GLTexture1D()
+{
+}
+
+TextureFilter GLTexture1D::getMagnificationFilter() const
+{
+    return magnificationFilter;
+}
+
+TextureFilter GLTexture1D::getMinificationFilter() const
+{
+    return minificationFilter;
+}
+
+void GLTexture1D::setMagnificationFilter(TextureFilter newFilter)
+{
+    magnificationFilter = newFilter;
+    needsUpdate = true;
+}
+
+void GLTexture1D::setMinificationFilter(TextureFilter newFilter)
+{
+    minificationFilter = newFilter;
+    needsUpdate = true;
+}
+
+PixelFormat GLTexture1D::getPixelFormat() const
+{
+    return pixelFormat;
+}
+
+void *GLTexture1D::getHandle() const
+{
+    return reinterpret_cast<void*> (size_t(handle));
+}
+
+int GLTexture1D::getWidth() const
+{
+    return width;
+}
+
+void GLTexture1D::bind()
+{
+    glBindTexture(GL_TEXTURE_1D, handle);
+}
+
+void GLTexture1D::allocateInDevice()
+{
+    update();
+
+    auto internalFormat = mapInternalFormat(pixelFormat);
+    auto format = mapFormat(pixelFormat);
+    auto type = mapType(pixelFormat);
+    glTexImage1D(GL_TEXTURE_2D, 0, internalFormat, width, 0, format, type, nullptr);
+}
+
+void GLTexture1D::upload(PixelFormat imageFormat, size_t size, const void *data)
+{
+    update();
+
+    auto internalFormat = mapInternalFormat(pixelFormat);
+    auto format = mapFormat(imageFormat);
+    auto type = mapType(imageFormat);
+    glTexImage1D(GL_TEXTURE_1D, 0, internalFormat, width, 0, format, type, data);
+
+}
+
+void GLTexture1D::update()
+{
+    bind();
+
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, mapTextureFilter(minificationFilter));
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, mapTextureFilter(magnificationFilter));
+    needsUpdate = false;
+}
+
+GLTexture1DPtr GLTexture1D::create(int width, PixelFormat pixelFormat)
+{
+    GLuint handle;
+    glGenTextures(1, &handle);
+
+    return GLTexture1DPtr(new GLTexture1D(handle, width, pixelFormat));
+}
+
+/// 2D Texture
+
 GLTexture2D::GLTexture2D(GLuint handle, int width, int height, PixelFormat pixelFormat)
     : handle(handle), width(width), height(height), pixelFormat(pixelFormat)
 {

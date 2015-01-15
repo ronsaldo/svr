@@ -55,7 +55,7 @@ float4 convertToCubeCoordinates(float3 point, float4 boxMin, float4 boxMax)
 	return result;
 }
 
-float4 integrate(__read_only image3d_t volume, float segmentLength, float4 startPoint, float4 endPoint, int minNumberOfSamples, int maxNumberOfSamples, float lengthSamplingFactor, float boxLength, float lengthScale, float alphaScale, float4 cubeViewRegionMin, float4 cubeViewRegionMax, sampler_t cubeSampler, 
+float4 integrate(__read_only image3d_t volume, float segmentLength, float4 startPoint, float4 endPoint, int minNumberOfSamples, int maxNumberOfSamples, float lengthSamplingFactor, float boxLength, float lengthScale, float4 cubeViewRegionMin, float4 cubeViewRegionMax, sampler_t cubeSampler, 
 image1d_t colorMap, float filterMinValue, float filterMaxValue)
 {
 	// Compute the number of samples and the step size to use.
@@ -80,45 +80,29 @@ image1d_t colorMap, float filterMinValue, float filterMaxValue)
 	return result;
 }
 
-float4 integrateSolid(__read_only image3d_t volume, float segmentLength, float4 startPoint, float4 endPoint, int minNumberOfSamples, int maxNumberOfSamples, float lengthSamplingFactor, float boxLength, float lengthScale, float alphaScale, float4 cubeViewRegionMin, float4 cubeViewRegionMax, sampler_t cubeSampler, 
-image1d_t colorMap, float filterMinValue, float filterMaxValue)
-{
-	// Compute the number of samples and the step size to use.
-	float integrationLength = segmentLength;
-	int numberOfSteps = clamp((int)ceil(lengthSamplingFactor*integrationLength * (maxNumberOfSamples - 1) / boxLength),  minNumberOfSamples, maxNumberOfSamples); 
-	float scaleFactor = integrationLength;
-	float stepSize = 1.0 / (numberOfSteps - 1);
-	
-	// Endpoints for the trapezoidal rule
-	float4 result = (float4) (0.0f, 0.0f, 0.0f, 0.0f);
-	
-	// Sample the inner points
-	for(int i = 0; i < numberOfSteps; ++i) {
-		float4 point = mix(startPoint, endPoint, i*stepSize);
-		float4 sample = sampleVolume(volume, cubeSampler, point, colorMap, filterMinValue, filterMaxValue);
-		float sampleAlpha = sample.w*alphaScale;
-		result = (float4) (result.xyz*result.w + sample.xyz*sampleAlpha*(1.0-result.w), result.w + sampleAlpha*(1.0f - result.w));
-	}
-	//result *= stepSize * scaleFactor / 3.0;
-	//result *= stepSize  / 3.0;
-	result.w = 1.0;
-	return result;
-}
-
-// Cube slice extraction
+// Cube volume rendering
 __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t renderBuffer,
-	float4 boxMin, float4 boxMax, float lengthScale,
+    // Camera information
+    float4 nearTopLeft, float4 nearTopRight, float4 nearBottomLeft, float4 nearBottomRight,
+    float4 farTopLeft, float4 farTopRight, float4 farBottomLeft, float4 farBottomRight,
+
+    // Cube parameters
+	float4 boxMin, float4 boxMax, 
+	float4 cubeViewRegionMin, float4 cubeViewRegionMax,
+    float lengthScale,
+
+    // Sampling
 	int minNumberOfSamples,
 	int maxNumberOfSamples,
 	float lengthSamplingFactor,
-	float4 center, float4 nearTopLeft, float4 nearTopRight, float4 nearBottomLeft, float4 nearBottomRight,
-	float alphaScale,
-	float nearDistance, float farDistance,
-	float invGammaCorrectionFactor,
-	float4 cubeViewRegionMin, float4 cubeViewRegionMax,
+
+    // Color mapping
 	sampler_t cubeSampler,
 	image1d_t colorMap, float filterMinValue, float filterMaxValue,
-	float4 viewForwardVector)
+
+    // Color correction
+	float invGammaCorrectionFactor
+)
 {
 	// Compute data from the cube.
 	float boxLength = length(boxMax - boxMin);
@@ -133,23 +117,29 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 	int2 coord = (int2) (get_global_id(0), get_global_id(1));
 	float2 uvCoord = (float2) ((coord.x) / (extent.x - 1.0f), coord.y / (extent.y - 1.0f));
 
-	// Compute the ray target point.
-	float4 targetPoint = mix(mix(nearTopLeft, nearTopRight, uvCoord.x), mix(nearBottomLeft, nearBottomRight, uvCoord.x), uvCoord.y);
-	float3 rayOrigin = (targetPoint.xyz - viewForwardVector.xyz ) * (1.0 - center.w) +  center.xyz*center.w;
-	float3 rayDirection = normalize(targetPoint.xyz - rayOrigin);
+	// Compute the point location in the near and the far plane
+    float4 nearPoint = mix(mix(nearTopLeft, nearTopRight, uvCoord.x), mix(nearBottomLeft, nearBottomRight, uvCoord.x), uvCoord.y);
+    float4 farPoint = mix(mix(farTopLeft, farTopRight, uvCoord.x), mix(farBottomLeft, farBottomRight, uvCoord.x), uvCoord.y);
+
+    // Compute the ray.
+    float3 rayOrigin = nearPoint.xyz;
+    float3 rayTarget = farPoint.xyz;
+	float3 rayDirection = normalize(rayTarget - rayOrigin);
 	float3 rayInverseDirection = 1.0 / rayDirection;
+    float rayMaxParameter = dot(rayTarget - rayOrigin, rayDirection);
 
 	// Compute the ray intersection points.	
 	float3 intersection = rayBoxIntersection(rayOrigin, rayDirection, rayInverseDirection, viewMin.xyz, viewMax.xyz);
 	float4 color = (float4) (0.0, 0.0, 0.0, 1.0);
 	if(intersection.z == 1.0 && intersection.y >= 0.0)
 	{
+        // Compute the start and end points in world space.
 		float3 startPoint = rayOrigin + rayDirection*max(intersection.x, 0.0f);
-		float3 endPoint = rayOrigin + rayDirection*intersection.y;
+		float3 endPoint = rayOrigin + rayDirection*min(intersection.y, rayMaxParameter);
 		
 		float4 startPointCube = convertToCubeCoordinates(startPoint, boxMin, boxMax);
 		float4 endPointCube = convertToCubeCoordinates(endPoint, boxMin, boxMax);
-		color = integrate(volume, length(endPoint - startPoint)/lengthScale, startPointCube, endPointCube, minNumberOfSamples, maxNumberOfSamples, lengthSamplingFactor, boxLength, lengthScale, alphaScale, cubeViewRegionMin, cubeViewRegionMax, cubeSampler, colorMap, filterMinValue, filterMaxValue);
+		color = integrate(volume, length(endPoint - startPoint)/lengthScale, startPointCube, endPointCube, minNumberOfSamples, maxNumberOfSamples, lengthSamplingFactor, boxLength, lengthScale, cubeViewRegionMin, cubeViewRegionMax, cubeSampler, colorMap, filterMinValue, filterMaxValue);
 	}
 	
 	write_imagef(renderBuffer, coord,  pow(color, invGammaCorrectionFactor));

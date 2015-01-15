@@ -23,6 +23,7 @@ namespace OpenGL
 DECLARE_CLASS(Shader);
 DECLARE_CLASS(Program);
 DECLARE_CLASS(BufferObject);
+DECLARE_CLASS(GLTexture1D);
 DECLARE_CLASS(GLTexture2D);
 
 /**
@@ -116,6 +117,47 @@ private:
     GLenum target;
     GLenum usage;
     GLuint handle;
+};
+
+/**
+ * OpenGL texture 1D
+ */
+class GLTexture1D: public Texture1D
+{
+public:
+    ~GLTexture1D();
+
+    virtual TextureFilter getMagnificationFilter() const;
+    virtual TextureFilter getMinificationFilter() const;
+    virtual void setMagnificationFilter(TextureFilter newFilter);
+    virtual void setMinificationFilter(TextureFilter newFilter);
+
+    virtual PixelFormat getPixelFormat() const;
+
+    virtual void *getHandle() const;
+
+    virtual int getWidth() const;
+
+    virtual void allocateInDevice();
+    virtual void upload(PixelFormat format, size_t size, const void *data);
+
+    void bind();
+
+    static GLTexture1DPtr create(int width, PixelFormat pixelFormat);
+
+private:
+    GLTexture1D(GLuint handle, int width, PixelFormat pixelFormat);
+
+    void update();
+
+    GLuint handle;
+    int width;
+    PixelFormat pixelFormat;
+
+    TextureFilter magnificationFilter;
+    TextureFilter minificationFilter;
+
+    bool needsUpdate;
 };
 
 /**

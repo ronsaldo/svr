@@ -34,6 +34,9 @@ public:
 
     virtual Texture1DPtr createTexture1D(int width, PixelFormat pixelFormat) = 0;
     virtual Texture2DPtr createTexture2D(int width, int height, PixelFormat pixelFormat) = 0;
+
+    virtual void beginCompute() = 0;
+    virtual void endCompute() = 0;
 };
 
 RendererPtr createRenderer();
