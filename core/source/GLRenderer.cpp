@@ -24,6 +24,7 @@ public:
 
     virtual void setTexture(const Texture2DPtr &texture);
     virtual void setColor(const glm::vec4 &color);
+    virtual void setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end);
 
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end);
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
@@ -36,6 +37,9 @@ public:
 
     virtual void beginCompute();
     virtual void endCompute();
+
+    virtual const glm::mat3 &getModelViewMatrix() const;
+    virtual void setModelViewMatrix(const glm::mat3 &matrix);
 
 private:
     bool loadPrograms();
@@ -154,6 +158,18 @@ void GLRenderer::setTexture(const Texture2DPtr &texture)
     textureCoordinateMatrix = glm::mat3();
     textureCoordinateMatrix[0][0] = 1.0 / texture->getWidth();
     textureCoordinateMatrix[1][1] = 1.0 / texture->getHeight();
+    updateTextureMatrix();
+}
+
+void GLRenderer::setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end)
+{
+    currentMaterial = Material(MaterialType::LinearGradient);
+    currentMaterial.texture = texture;
+    currentMaterial.firstPoint = start;
+    currentMaterial.secondPoint = end;
+    currentColor = glm::vec4(1.0, 1.0, 1.0, 1.0);
+
+    textureCoordinateMatrix = glm::mat3();
     updateTextureMatrix();
 }
 
@@ -301,8 +317,14 @@ void GLRenderer::useLinearGradientMaterial(const Material &material)
 {
     useProgram(linearGradientProgram);
 
-    //auto glTexture = std::static_pointer_cast<GLTexture1D> (material.texture);
-    //glTexture->bind();
+    auto glTexture = std::static_pointer_cast<GLTexture1D> (material.texture);
+    glTexture->bind();
+
+    auto direction = material.secondPoint - material.firstPoint;
+
+    linearGradientProgram->uniformVec2("gradientStart", material.firstPoint);
+    linearGradientProgram->uniformVec2("gradientDirection", glm::normalize(direction));
+    linearGradientProgram->uniformFloat("gradientLength", glm::length(direction));
 }
 
 ProgramPtr GLRenderer::programForMaterialType(MaterialType type)
@@ -345,6 +367,15 @@ void GLRenderer::endCompute()
 {
 }
 
+const glm::mat3 &GLRenderer::getModelViewMatrix() const
+{
+    return modelViewMatrix;
+}
+
+void GLRenderer::setModelViewMatrix(const glm::mat3 &matrix)
+{
+    modelViewMatrix = matrix;
+}
 
 } // namespace OpenGL
 

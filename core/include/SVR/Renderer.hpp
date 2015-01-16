@@ -25,6 +25,7 @@ public:
 
     virtual void setColor(const glm::vec4 &color) = 0;
     virtual void setTexture(const Texture2DPtr &texture) = 0;
+    virtual void setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end) = 0;
 
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end) = 0;
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c) = 0;
@@ -37,6 +38,30 @@ public:
 
     virtual void beginCompute() = 0;
     virtual void endCompute() = 0;
+
+    virtual const glm::mat3 &getModelViewMatrix() const = 0;
+    virtual void setModelViewMatrix(const glm::mat3 &matrix) = 0;
+
+    template<typename F>
+    void restoreModelViewMatrixAfter(F f)
+    {
+        auto oldMatrix = getModelViewMatrix();
+        f();
+        setModelViewMatrix(oldMatrix);
+    }
+
+    inline void translateModelView(const glm::vec2 &translation)
+    {
+        glm::mat3 mat;
+        mat[2][0] = translation.x;
+        mat[2][1] = translation.y;
+        multModelView(mat);
+    }
+
+    inline void multModelView(const glm::mat3 &matrix)
+    {
+        setModelViewMatrix(getModelViewMatrix()*matrix);
+    }
 };
 
 RendererPtr createRenderer();

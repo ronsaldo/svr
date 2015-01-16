@@ -73,6 +73,11 @@ public:
 
     static ProgramPtr loadFromFile(const std::string &vertexPath, const std::string &fragmentPath);
 
+    void uniformFloat(const std::string &name, float value);
+    void uniformVec2(const std::string &name, const glm::vec2 &vector);
+    void uniformVec3(const std::string &name, const glm::vec3 &vector);
+    void uniformVec4(const std::string &name, const glm::vec3 &vector);
+
     void uniformMat4(const std::string &name, const glm::mat4 &matrix);
 
     GLuint getHandle();

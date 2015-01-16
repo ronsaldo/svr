@@ -23,6 +23,7 @@ struct Material
 {
     MaterialType type;
     TexturePtr texture;
+    glm::vec2 firstPoint, secondPoint;
 
     Material() {}
     Material(MaterialType materialType)

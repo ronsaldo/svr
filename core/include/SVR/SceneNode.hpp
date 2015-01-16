@@ -43,7 +43,7 @@ public:
 
     glm::mat4 getModelMatrix() const
     {
-        return glm::translate(glm::mat4_cast(orientation), position);
+        return glm::translate(glm::mat4(), position) * glm::mat4_cast(orientation);
     }
 
 private:

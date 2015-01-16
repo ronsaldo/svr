@@ -10,6 +10,9 @@
 #include "SVR/FitsFile.hpp"
 #include "SVR/AABox.hpp"
 #include "SVR/AstronomyMappings.hpp"
+
+#include "SVR/ColorBarWidget.hpp"
+
 #include "ColorMap.hpp"
 
 namespace SVR
@@ -48,6 +51,8 @@ private:
     bool initializeTextures();
     bool initializeComputation();
     bool parseCommandLine(int argc, const char **argv);
+
+    bool initializeUI();
 
     void computeCubeImageBox();
 
@@ -119,7 +124,11 @@ private:
 
     // Movement
     glm::vec3 cameraVelocity;
+    glm::vec3 cameraAngle;
     glm::vec3 cameraAngularVelocity;
+
+    // UI
+    ColorBarWidgetPtr colorBarWidget;
 };
 
 }

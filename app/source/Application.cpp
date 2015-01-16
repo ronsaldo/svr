@@ -89,6 +89,9 @@ bool Application::initialize(int argc, const char **argv)
     if(!initializeScene())
         fatalError("Failed to initialize the scene");
 
+    if(!initializeUI())
+        fatalError("Failed to initialize the UI");
+
     return true;
 }
 
@@ -226,9 +229,18 @@ bool Application::initializeScene()
 
     performScaleMapping();
 
-
     // Set the color map.
     setColorMapNamed(colorMapName);
+
+    return true;
+}
+
+bool Application::initializeUI()
+{
+    colorBarWidget = std::make_shared<ColorBarWidget> ();
+    colorBarWidget->setPosition(glm::vec2(600, 0.0));
+    colorBarWidget->setSize(glm::vec2(40, 480));
+    colorBarWidget->setGradient(colorMapTexture);
 
     return true;
 }
@@ -339,10 +351,15 @@ void Application::processEvents()
 
 void Application::update(float delta)
 {
+    const float AngularSpeed = 50.0f;
     const float LinearSpeed = 2.0f;
 
+    cameraAngle += cameraAngularVelocity*(AngularSpeed*delta);
+    auto newRotation = glm::conjugate(xyzEulerToQuaternion(degreesToRadians(cameraAngle)));
+    camera->setOrientation(newRotation);
+
     auto oldPosition = camera->getPosition();
-    camera->setPosition(oldPosition + cameraVelocity*(delta*LinearSpeed));
+    camera->setPosition(oldPosition + glm::rotate(newRotation, cameraVelocity*(delta*LinearSpeed)));
 }
 
 void Application::computeCubeImageBox()
@@ -442,6 +459,9 @@ void Application::render()
 
     renderer->setTexture(colorBuffer);
     renderer->drawRectangle(glm::vec2(0.0, 0.0), extent);
+
+
+    colorBarWidget->draw(renderer);
 
     /*renderer->setColor(glm::vec4(0.0, 1.0, 0.0, 0.0));
     renderer->drawLine(glm::vec2(0.0, 200.0), glm::vec2(200.0, 200.0));

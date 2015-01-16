@@ -165,6 +165,30 @@ GLint Program::uniformId(const std::string &name)
     return (it != uniformNameMap.end()) ? it->second : -1;
 }
 
+void Program::uniformFloat(const std::string &name, float value)
+{
+    auto location = uniformId(name);
+    glUniform1f(location, value);
+}
+
+void Program::uniformVec2(const std::string &name, const glm::vec2 &vector)
+{
+    auto location = uniformId(name);
+    glUniform2fv(location, 1, (float*)&vector);
+}
+
+void Program::uniformVec3(const std::string &name, const glm::vec3 &vector)
+{
+    auto location = uniformId(name);
+    glUniform3fv(location, 1, (float*)&vector);
+}
+
+void Program::uniformVec4(const std::string &name, const glm::vec3 &vector)
+{
+    auto location = uniformId(name);
+    glUniform4fv(location, 1, (float*)&vector);
+}
+
 void Program::uniformMat4(const std::string &name, const glm::mat4 &matrix)
 {
     auto location = uniformId(name);
