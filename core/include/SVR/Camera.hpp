@@ -59,8 +59,7 @@ public:
     void perspective(float fovy, float aspect, float near, float far)
     {
         projectionMatrix = glm::perspective(fovy, aspect, near, far);
-        auto angle = fovy*M_PI*0.5/180.0;
-        auto tg = tan(angle);
+        auto tg = tan(degreesToRadians(fovy*0.5));
 
         // Near plane
         auto nearTop = tg*near;
@@ -75,9 +74,9 @@ public:
 
         // Far plane
         auto farTop = tg*far;
-        auto farRight = nearTop*aspect;
-        auto farBottom = -nearTop;
-        auto farLeft = -nearRight;
+        auto farRight = farTop*aspect;
+        auto farBottom = -farTop;
+        auto farLeft = -farRight;
 
         frustumCorners[(int)FrustumCorner::LeftTopFar] = glm::vec4(farLeft, farTop, -far, 1.0);
         frustumCorners[(int)FrustumCorner::RightTopFar] = glm::vec4(farRight, farTop, -far, 1.0);

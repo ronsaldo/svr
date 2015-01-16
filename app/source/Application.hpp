@@ -8,11 +8,20 @@
 #include "SVR/Renderer.hpp"
 #include "SVR/ComputePlatform.hpp"
 #include "SVR/FitsFile.hpp"
+#include "SVR/AABox.hpp"
 #include "SVR/AstronomyMappings.hpp"
 #include "ColorMap.hpp"
 
 namespace SVR
 {
+/**
+ * Cube mapping
+ */
+enum DataScale
+{
+    Linear = 0,
+    Log
+};
 
 /**
  * The scalable volumetric renderer application.
@@ -26,12 +35,21 @@ public:
     int main(int argc, const char **argv);
     void quit();
 
+    void setColorMap(const ColorMapPtr &colorMap);
+    void setColorMapNamed(const std::string &name);
+
+    void setDataScale(DataScale dataScale);
+    void setDataScaleNamed(const std::string &name);
+
 private:
+    void initializeDictionaries();
     bool initialize(int argc, const char **argv);
     bool initializeScene();
     bool initializeTextures();
     bool initializeComputation();
     bool parseCommandLine(int argc, const char **argv);
+
+    void computeCubeImageBox();
 
     void mainLoop();
     void shutdown();
@@ -39,8 +57,8 @@ private:
     void processEvents();
     void render();
     void raycast();
-
-    void setColorMap(const ColorMap &colorMap);
+    void update(float delta);
+    void performScaleMapping();
 
     void onKeyDown(const SDL_KeyboardEvent &event);
     void onKeyUp(const SDL_KeyboardEvent &event);
@@ -51,24 +69,36 @@ private:
     RendererPtr renderer;
 
     Texture2DPtr colorBuffer;
-    Texture1DPtr colorMapTexture;
-    ColorMap colorMap;
 
+    // Color mapping
+    Texture1DPtr colorMapTexture;
+    ColorMapPtr colorMap;
+    std::string colorMapName;
+    std::map<std::string, ColorMapPtr> colorMapNameDictionary;
+
+    // Scene parameters
     int screenWidth, screenHeight;
     float fovy;
     float gammaCorrection;
+
+    // Data visualization scale
+    DataScale dataScale;
+    std::map<std::string, DataScale> dataScaleNameMap;
 
     // Raycasting parameters
     AABox cubeImageBox;
     AABox cubeViewRegion;
     float lengthScale;
 
+    // Raycasting samples
     int minNumberOfSamples;
     int maxNumberOfSamples;
     float lengthSamplingFactor;
 
+    // Cube data filtering
     float filterMinValue, filterMaxValue;
     ComputeSamplerPtr currentSampler;
+    ComputeSamplerPtr nearestSampler, linearSampler;
 
     // Compute platform programs and buffers.
     ComputePlatformPtr computePlatform;
@@ -76,7 +106,6 @@ private:
     ComputeProgramPtr raycastProgram;
     ComputeProgramPtr cubeMappingsFloatProgram;
     ComputeProgramPtr cubeMappingsDoubleProgram;
-    ComputeProgramPtr testProgram;
 
     ComputeBufferPtr computeColorMap;
     ComputeBufferPtr computeColorBuffer;
@@ -88,6 +117,9 @@ private:
     std::string cubeFileName;
     FitsFile *cubeFile;
 
+    // Movement
+    glm::vec3 cameraVelocity;
+    glm::vec3 cameraAngularVelocity;
 };
 
 }

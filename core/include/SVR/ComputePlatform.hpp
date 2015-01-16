@@ -4,6 +4,7 @@
 #include "SVR/ComputeProgram.hpp"
 #include "SVR/ComputeDevice.hpp"
 #include "SVR/ComputeBuffer.hpp"
+#include "SVR/ComputeSampler.hpp"
 #include "SVR/PixelFormat.hpp"
 
 namespace SVR
@@ -34,6 +35,10 @@ struct ComputePlatform
 
     virtual void beginCompute() = 0;
     virtual void endCompute() = 0;
+
+    virtual ComputeSamplerPtr createNearestSampler() = 0;
+    virtual ComputeSamplerPtr createLinearSampler() = 0;
+
 };
 
 ComputePlatformPtr createComputePlatform();

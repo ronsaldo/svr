@@ -9,6 +9,7 @@ namespace SVR
 
 DECLARE_INTERFACE(ComputeKernel);
 DECLARE_INTERFACE(ComputeBuffer);
+DECLARE_INTERFACE(ComputeSampler);
 
 /**
  * Computation kernel
@@ -16,6 +17,8 @@ DECLARE_INTERFACE(ComputeBuffer);
 struct ComputeKernel: Interface
 {
     virtual void setBufferArg(int arg, const ComputeBufferPtr &buffer) = 0;
+    virtual void setSamplerArg(int arg, const ComputeSamplerPtr &sampler) = 0;
+
     virtual void setIntArg(int arg, int value) = 0;
 
     virtual void setFloatArg(int arg, float value) = 0;

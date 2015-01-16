@@ -87,6 +87,41 @@ inline cl_image_format computeMapPixelFormat(PixelFormat format)
 }
 
 /**
+ * CLComputeSampler
+ */
+class CLComputeSampler: public ComputeSampler
+{
+public:
+    CLComputeSampler(cl_sampler sampler);
+    ~CLComputeSampler();
+
+    void destroy();
+
+    cl_sampler getSampler();
+
+private:
+    cl_sampler sampler;
+};
+
+CLComputeSampler::CLComputeSampler(cl_sampler sampler)
+    : sampler(sampler)
+{
+}
+
+CLComputeSampler::~CLComputeSampler()
+{
+}
+
+void CLComputeSampler::destroy()
+{
+}
+
+cl_sampler CLComputeSampler::getSampler()
+{
+    return sampler;
+}
+
+/**
  * CLComputeDevice
  */
 class CLComputeDevice: public ComputeDevice
@@ -148,7 +183,7 @@ void CLComputeDevice::beginCompute()
 
 void CLComputeDevice::endCompute()
 {
-    clFlush(commandQueue);
+    clFinish(commandQueue);
 }
 
 cl_device_id CLComputeDevice::getHandle()
@@ -228,6 +263,7 @@ public:
     virtual void destroy();
 
     virtual void setBufferArg(int arg, const ComputeBufferPtr &buffer);
+    virtual void setSamplerArg(int arg, const ComputeSamplerPtr &sampler);
 
     virtual void setIntArg(int arg, int value);
 
@@ -273,6 +309,13 @@ void CLComputeKernel::setBufferArg(int arg, const ComputeBufferPtr &buffer)
     auto clBuffer = std::static_pointer_cast<CLComputeBuffer> (buffer);
     auto clBufferHandle = clBuffer->getMem();
     clSetKernelArg(kernel, arg, sizeof(clBufferHandle), &clBufferHandle);
+}
+
+void CLComputeKernel::setSamplerArg(int arg, const ComputeSamplerPtr &sampler)
+{
+    auto clSampler = std::static_pointer_cast<CLComputeSampler> (sampler);
+    auto clSamplerHandle = clSampler->getSampler();
+    clSetKernelArg(kernel, arg, sizeof(clSamplerHandle), &clSamplerHandle);
 }
 
 void CLComputeKernel::setIntArg(int arg, int value)
@@ -451,6 +494,9 @@ public:
 
     virtual void beginCompute();
     virtual void endCompute();
+
+    virtual ComputeSamplerPtr createNearestSampler();
+    virtual ComputeSamplerPtr createLinearSampler();
 
 private:
     bool createContext();
@@ -762,6 +808,20 @@ void CLComputePlatform::endCompute()
 {
     for(auto &device : devices)
         device.endCompute();
+}
+
+ComputeSamplerPtr CLComputePlatform::createNearestSampler()
+{
+    cl_int err;
+    auto sampler = clCreateSampler(context, CL_TRUE, CL_ADDRESS_CLAMP, CL_FILTER_NEAREST, &err);
+    return std::make_shared<CLComputeSampler> (sampler);
+}
+
+ComputeSamplerPtr CLComputePlatform::createLinearSampler()
+{
+    cl_int err;
+    auto sampler = clCreateSampler(context, CL_TRUE, CL_ADDRESS_CLAMP, CL_FILTER_LINEAR, &err);
+    return std::make_shared<CLComputeSampler> (sampler);
 }
 
 } // namespace SVR

@@ -95,9 +95,9 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 	int minNumberOfSamples,
 	int maxNumberOfSamples,
 	float lengthSamplingFactor,
+	sampler_t cubeSampler,
 
     // Color mapping
-	sampler_t cubeSampler,
 	image1d_t colorMap, float filterMinValue, float filterMaxValue,
 
     // Color correction
@@ -118,8 +118,8 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 	float2 uvCoord = (float2) ((coord.x) / (extent.x - 1.0f), coord.y / (extent.y - 1.0f));
 
 	// Compute the point location in the near and the far plane
-    float4 nearPoint = mix(mix(nearTopLeft, nearTopRight, uvCoord.x), mix(nearBottomLeft, nearBottomRight, uvCoord.x), uvCoord.y);
-    float4 farPoint = mix(mix(farTopLeft, farTopRight, uvCoord.x), mix(farBottomLeft, farBottomRight, uvCoord.x), uvCoord.y);
+    float4 nearPoint = mix(mix(nearBottomLeft, nearBottomRight, uvCoord.x), mix(nearTopLeft, nearTopRight, uvCoord.x), uvCoord.y);
+    float4 farPoint = mix(mix(farBottomLeft, farBottomRight, uvCoord.x), mix(farTopLeft, farTopRight, uvCoord.x), uvCoord.y);
 
     // Compute the ray.
     float3 rayOrigin = nearPoint.xyz;
@@ -141,7 +141,7 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 		float4 endPointCube = convertToCubeCoordinates(endPoint, boxMin, boxMax);
 		color = integrate(volume, length(endPoint - startPoint)/lengthScale, startPointCube, endPointCube, minNumberOfSamples, maxNumberOfSamples, lengthSamplingFactor, boxLength, lengthScale, cubeViewRegionMin, cubeViewRegionMax, cubeSampler, colorMap, filterMinValue, filterMaxValue);
 	}
-	
+
 	write_imagef(renderBuffer, coord,  pow(color, invGammaCorrectionFactor));
 }
 
