@@ -25,6 +25,7 @@ public:
     virtual void setTexture(const Texture2DPtr &texture);
     virtual void setColor(const glm::vec4 &color);
     virtual void setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end);
+    virtual void setGammaCorrection(float gammaCorrection);
 
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end);
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
@@ -41,6 +42,9 @@ public:
     virtual const glm::mat3 &getModelViewMatrix() const;
     virtual void setModelViewMatrix(const glm::mat3 &matrix);
 
+    virtual void useMainFramebuffer();
+    virtual FramebufferPtr createFramebuffer(int width, int height);
+
 private:
     bool loadPrograms();
     void create2DCanvas();
@@ -53,14 +57,14 @@ private:
     void useSolidColorMaterial(const Material &material);
     void useTexturedMaterial(const Material &material);
     void useLinearGradientMaterial(const Material &material);
-
-    ProgramPtr programForMaterialType(MaterialType type);
+    void useGammaCorrectedMaterial(const Material &material);
 
     Vertex2D vertexForPosition(const glm::vec2 &position);
 
     ProgramPtr colorProgram;
     ProgramPtr texturedProgram;
     ProgramPtr linearGradientProgram;
+    ProgramPtr gammaCorrectionProgram;
 
     LocalMesh2DBuilder builder;
     BufferObjectPtr vertexBuffer;
@@ -118,7 +122,8 @@ bool GLRenderer::loadPrograms()
     colorProgram = Program::loadFromFile("data/shaders/color.glslv", "data/shaders/color.glslf");
     texturedProgram = Program::loadFromFile("data/shaders/textured.glslv", "data/shaders/textured.glslf");
     linearGradientProgram = Program::loadFromFile("data/shaders/linearGradient.glslv", "data/shaders/linearGradient.glslf");
-    return colorProgram && texturedProgram && linearGradientProgram;
+    gammaCorrectionProgram = Program::loadFromFile("data/shaders/gammaCorrection.glslv", "data/shaders/gammaCorrection.glslf");
+    return colorProgram && texturedProgram && linearGradientProgram && gammaCorrectionProgram;
 }
 
 void GLRenderer::updateTextureMatrix()
@@ -171,6 +176,12 @@ void GLRenderer::setLinearGradient(const Texture1DPtr &texture, const glm::vec2 
 
     textureCoordinateMatrix = glm::mat3();
     updateTextureMatrix();
+}
+
+void GLRenderer::setGammaCorrection(float gammaCorrection)
+{
+    currentMaterial.type = MaterialType::GammaCorrected;
+    currentMaterial.gamma = gammaCorrection;
 }
 
 void GLRenderer::drawLine(const glm::vec2 &start, const glm::vec2 &end)
@@ -294,6 +305,9 @@ void GLRenderer::useMaterial(const Material &material)
     case MaterialType::LinearGradient:
         useLinearGradientMaterial(material);
         break;
+    case MaterialType::GammaCorrected:
+        useGammaCorrectedMaterial(material);
+        break;
     default:
         abort();
     }
@@ -327,19 +341,14 @@ void GLRenderer::useLinearGradientMaterial(const Material &material)
     linearGradientProgram->uniformFloat("gradientLength", glm::length(direction));
 }
 
-ProgramPtr GLRenderer::programForMaterialType(MaterialType type)
+void GLRenderer::useGammaCorrectedMaterial(const Material &material)
 {
-    switch(type)
-    {
-    case MaterialType::SolidColor:
-        return colorProgram;
-    case MaterialType::Textured:
-        return texturedProgram;
-    case MaterialType::LinearGradient:
-        return linearGradientProgram;
-    default:
-        abort();
-    }
+    useProgram(gammaCorrectionProgram);
+
+    auto glTexture = std::static_pointer_cast<GLTexture2D> (material.texture);
+    glTexture->bind();
+
+    gammaCorrectionProgram->uniformFloat("inverseGammaFactor", 1.0 / material.gamma);
 }
 
 void GLRenderer::drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, GLenum elementType)
@@ -375,6 +384,18 @@ const glm::mat3 &GLRenderer::getModelViewMatrix() const
 void GLRenderer::setModelViewMatrix(const glm::mat3 &matrix)
 {
     modelViewMatrix = matrix;
+}
+
+FramebufferPtr GLRenderer::createFramebuffer(int width, int height)
+{
+    GLuint fbo;
+    glGenFramebuffers(1, &fbo);
+    return std::make_shared<GLFramebuffer> (fbo, width, height);
+}
+
+void GLRenderer::useMainFramebuffer()
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 } // namespace OpenGL

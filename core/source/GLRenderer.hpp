@@ -207,6 +207,27 @@ private:
     bool needsUpdate;
 };
 
+/**
+ * GLFramebuffer
+ */
+class GLFramebuffer: public Framebuffer
+{
+public:
+    GLFramebuffer(GLuint fbo, int width, int height);
+    ~GLFramebuffer();
+
+    virtual int getWidth() const;
+    virtual int getHeight() const;
+
+    virtual void attachTexture(FramebufferAttachment attachmentPoint, const Texture2DPtr &texture);
+
+    virtual void activate();
+
+private:
+    GLuint fbo;
+    int width, height;
+};
+
 } // namespace OpenGL
 } // namespace SVR
 

@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include "SVR/Interface.hpp"
 #include "SVR/Texture.hpp"
+#include "SVR/Framebuffer.hpp"
 
 namespace SVR
 {
@@ -31,6 +32,8 @@ public:
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c) = 0;
     virtual void drawRectangle(const glm::vec2 &min, const glm::vec2 &max) = 0;
 
+    virtual void setGammaCorrection(float gammaCorrection) = 0;
+
     virtual void flushCommands() = 0;
 
     virtual Texture1DPtr createTexture1D(int width, PixelFormat pixelFormat) = 0;
@@ -41,6 +44,9 @@ public:
 
     virtual const glm::mat3 &getModelViewMatrix() const = 0;
     virtual void setModelViewMatrix(const glm::mat3 &matrix) = 0;
+
+    virtual void useMainFramebuffer() = 0;
+    virtual FramebufferPtr createFramebuffer(int width, int height) = 0;
 
     template<typename F>
     void restoreModelViewMatrixAfter(F f)

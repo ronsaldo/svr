@@ -67,13 +67,19 @@ private:
 
     void onKeyDown(const SDL_KeyboardEvent &event);
     void onKeyUp(const SDL_KeyboardEvent &event);
+    void onMouseButtonDown(const SDL_MouseButtonEvent &event);
+    void onMouseButtonUp(const SDL_MouseButtonEvent &event);
 
     bool isQuitting;
     SDL_Window *window;
     SDL_GLContext glContext;
     RendererPtr renderer;
 
-    Texture2DPtr colorBuffer;
+    // Screen color buffer
+    Texture2DPtr screenColorBuffer;
+    FramebufferPtr screenFramebuffer;
+
+    Texture2DPtr volumeColorBuffer;
 
     // Color mapping
     Texture1DPtr colorMapTexture;
@@ -113,7 +119,7 @@ private:
     ComputeProgramPtr cubeMappingsDoubleProgram;
 
     ComputeBufferPtr computeColorMap;
-    ComputeBufferPtr computeColorBuffer;
+    ComputeBufferPtr computeVolumeColorBuffer;
     ComputeBufferPtr computeCubeBuffer;
 
     CameraPtr camera;

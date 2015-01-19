@@ -13,7 +13,8 @@ enum class MaterialType
 {
     SolidColor = 0,
     Textured,
-    LinearGradient
+    LinearGradient,
+    GammaCorrected
 };
 
 /**
@@ -24,6 +25,7 @@ struct Material
     MaterialType type;
     TexturePtr texture;
     glm::vec2 firstPoint, secondPoint;
+    float gamma;
 
     Material() {}
     Material(MaterialType materialType)

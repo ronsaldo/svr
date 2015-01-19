@@ -103,6 +103,21 @@ inline GLenum mapType(PixelFormat pixelFormat)
     }
 }
 
+inline GLenum mapAttachmentPoint(FramebufferAttachment point)
+{
+    switch(point)
+    {
+    case FramebufferAttachment::Color:
+        return GL_COLOR_ATTACHMENT0;
+    case FramebufferAttachment::Depth:
+        return GL_DEPTH_ATTACHMENT;
+    case FramebufferAttachment::Stencil:
+        return GL_STENCIL_ATTACHMENT;
+    default:
+        abort();
+    }
+}
+
 GLTexture1D::GLTexture1D(GLuint handle, int width,PixelFormat pixelFormat)
     : handle(handle), width(width), pixelFormat(pixelFormat)
 {
@@ -292,6 +307,38 @@ GLTexture2DPtr GLTexture2D::create(int width, int height, PixelFormat pixelForma
     glGenTextures(1, &handle);
 
     return GLTexture2DPtr(new GLTexture2D(handle, width, height, pixelFormat));
+}
+
+
+GLFramebuffer::GLFramebuffer(GLuint fbo, int width, int height)
+    : fbo(fbo), width(width), height(height)
+{
+}
+
+GLFramebuffer::~GLFramebuffer()
+{
+}
+
+int GLFramebuffer::getWidth() const
+{
+    return width;
+}
+
+int GLFramebuffer::getHeight() const
+{
+    return height;
+}
+
+void GLFramebuffer::attachTexture(FramebufferAttachment attachmentPoint, const Texture2DPtr &texture)
+{
+    activate();
+    GLuint textureHandle = reinterpret_cast<size_t> (texture->getHandle());
+    glFramebufferTexture2D(GL_FRAMEBUFFER, mapAttachmentPoint(attachmentPoint), GL_TEXTURE_2D, textureHandle, 0);
+}
+
+void GLFramebuffer::activate()
+{
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 }
 
 } // namespace OpenGL

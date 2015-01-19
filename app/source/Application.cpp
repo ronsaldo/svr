@@ -145,10 +145,16 @@ void Application::setDataScaleNamed(const std::string &name)
 
 bool Application::initializeTextures()
 {
-    colorBuffer = renderer->createTexture2D(screenWidth, screenHeight, PixelFormat::RGBA32F);
-    colorBuffer->allocateInDevice();
+    screenColorBuffer = renderer->createTexture2D(screenWidth, screenHeight, PixelFormat::RGBA32F);
+    screenColorBuffer->allocateInDevice();
 
-    return colorBuffer.get();
+    screenFramebuffer = renderer->createFramebuffer(screenWidth, screenHeight);
+    screenFramebuffer->attachTexture(FramebufferAttachment::Color, screenColorBuffer);
+
+    volumeColorBuffer = renderer->createTexture2D(screenWidth, screenHeight, PixelFormat::RGBA32F);
+    volumeColorBuffer->allocateInDevice();
+
+    return true;
 }
 
 void Application::initializeDictionaries()
@@ -213,7 +219,7 @@ bool Application::initializeComputation()
     if(!nearestSampler || !linearSampler)
         return false;
 
-    computeColorBuffer = computePlatform->createImageFromTexture2D(colorBuffer);
+    computeVolumeColorBuffer = computePlatform->createImageFromTexture2D(volumeColorBuffer);
     return true;
 }
 
@@ -274,7 +280,7 @@ void Application::performScaleMapping()
 void Application::shutdown()
 {
     computeCubeBuffer->destroy();
-    computeColorBuffer->destroy();
+    computeVolumeColorBuffer->destroy();
     raycastProgram->destroy();
     cubeMappingsFloatProgram->destroy();
     cubeMappingsDoubleProgram->destroy();
@@ -336,6 +342,12 @@ void Application::processEvents()
     {
         switch(event.type)
         {
+        case SDL_MOUSEBUTTONDOWN:
+            onMouseButtonDown(event.button);
+            break;
+        case SDL_MOUSEBUTTONUP:
+            onMouseButtonUp(event.button);
+            break;
         case SDL_KEYDOWN:
             onKeyDown(event.key);
             break;
@@ -390,14 +402,14 @@ void Application::raycast()
     // Acquire shared resources
     renderer->beginCompute();
     computePlatform->beginCompute();
-    computeColorBuffer->acquireFromRenderer(device);
+    computeVolumeColorBuffer->acquireFromRenderer(device);
     computeColorMap->acquireFromRenderer(device);
 
     // Setup the kernel
     auto kernel = raycastProgram->createKernel("raycastVolume");
 
     kernel->setBufferArg(0, computeCubeBuffer);
-    kernel->setBufferArg(1, computeColorBuffer);
+    kernel->setBufferArg(1, computeVolumeColorBuffer);
 
     // Pass the camera    
     for(int i = 0; i < 8; ++i)
@@ -426,14 +438,14 @@ void Application::raycast()
     kernel->setFloatArg(21, filterMaxValue);
 
     // Color correction
-    kernel->setFloatArg(22, 1.0 / gammaCorrection);
+    kernel->setFloatArg(22, 1.0);
 
     // Run the rendering kernel
     //printf("Render frame %d %d\n", minNumberOfSamples, maxNumberOfSamples);
-    device->runGlobalKernel2D(kernel, colorBuffer->getWidth(), colorBuffer->getHeight());
+    device->runGlobalKernel2D(kernel, volumeColorBuffer->getWidth(), volumeColorBuffer->getHeight());
 
     // Release the shared resources.
-    computeColorBuffer->releaseFromRenderer(device);
+    computeVolumeColorBuffer->releaseFromRenderer(device);
     computePlatform->endCompute();
     renderer->endCompute();
 }
@@ -451,28 +463,30 @@ void Application::render()
     // Perform the rendering
     raycast();
 
+    // Draw to the screen.
+    screenFramebuffer->activate();
     renderer->setScreenSize(extent);
 
     // Clear the window.
     renderer->clearColor(glm::vec4(0.0, 0.0, 0.0, 0.0));
     renderer->clear();
 
-    renderer->setTexture(colorBuffer);
+    renderer->setTexture(volumeColorBuffer);
     renderer->drawRectangle(glm::vec2(0.0, 0.0), extent);
-
 
     colorBarWidget->draw(renderer);
 
-    /*renderer->setColor(glm::vec4(0.0, 1.0, 0.0, 0.0));
-    renderer->drawLine(glm::vec2(0.0, 200.0), glm::vec2(200.0, 200.0));
+    renderer->flushCommands();
 
-    renderer->setColor(glm::vec4(0.0, 0.0, 1.0, 0.0));
-    renderer->drawTriangle(glm::vec2(200.0, 100.0), glm::vec2(400.0, 250.0), glm::vec2(200.0, 400.0));
+    // Color correct the result.
+    renderer->useMainFramebuffer();
 
-    renderer->setColor(glm::vec4(1.0, 0.0, 0.0, 0.0));
-    renderer->drawTriangle(glm::vec2(400.0, 100.0), glm::vec2(600.0, 250.0), glm::vec2(400.0, 400.0));*/
+    renderer->setTexture(screenColorBuffer);
+    renderer->setGammaCorrection(gammaCorrection);
+    renderer->drawRectangle(glm::vec2(0.0, 0.0), extent);
 
     renderer->flushCommands();
+
     SDL_GL_SwapWindow(window);
 }
 
@@ -561,6 +575,14 @@ void Application::onKeyUp(const SDL_KeyboardEvent &event)
             cameraAngularVelocity.x = 0;
         break;
     }
+}
+
+void Application::onMouseButtonDown(const SDL_MouseButtonEvent &event)
+{
+}
+
+void Application::onMouseButtonUp(const SDL_MouseButtonEvent &event)
+{
 }
 
 } // namespace SVR
