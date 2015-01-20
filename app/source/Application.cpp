@@ -20,9 +20,6 @@ Application::Application()
     minNumberOfSamples = 20;
     lengthSamplingFactor = 1.5;
 
-    filterMinValue = -1.0;
-    filterMaxValue = 2.0;
-
     colorMapName = "sls";
     dataScale = DataScale::Linear;
     initializeDictionaries();
@@ -244,8 +241,8 @@ bool Application::initializeScene()
 bool Application::initializeUI()
 {
     colorBarWidget = std::make_shared<ColorBarWidget> ();
-    colorBarWidget->setPosition(glm::vec2(600, 0.0));
-    colorBarWidget->setSize(glm::vec2(40, 480));
+    colorBarWidget->setPosition(glm::vec2(screenWidth - 150, 0.0));
+    colorBarWidget->setSize(glm::vec2(150, screenHeight));
     colorBarWidget->setGradient(colorMapTexture);
 
     return true;
@@ -413,11 +410,7 @@ void Application::raycast()
 
     // Pass the camera    
     for(int i = 0; i < 8; ++i)
-    {
-        //auto p = transformedFrustum[i];
-        //printf("Frustum %d %f %f %f:%f\n", i, p.x, p.y, p.z, p.w);
         kernel->setFloat4Arg(2 + i, transformedFrustum[i]);
-    }
 
     // Cube parameters
     kernel->setFloat4Arg(10, glm::vec4(cubeImageBox.min, 0.0));
@@ -434,8 +427,8 @@ void Application::raycast()
 
     // Color mapping
     kernel->setBufferArg(19, computeColorMap);
-    kernel->setFloatArg(20, filterMinValue);
-    kernel->setFloatArg(21, filterMaxValue);
+    kernel->setFloatArg(20, colorBarWidget->getMinValue());
+    kernel->setFloatArg(21, colorBarWidget->getMaxValue());
 
     // Color correction
     kernel->setFloatArg(22, 1.0);
@@ -527,6 +520,10 @@ void Application::onKeyDown(const SDL_KeyboardEvent &event)
     case SDLK_DOWN:
         cameraAngularVelocity.x = 1;
         break;
+    case SDLK_r:
+        colorBarWidget->setMinValue(0.0f);
+        colorBarWidget->setMaxValue(1.0f);
+        break;
     }
 }
 
@@ -579,12 +576,23 @@ void Application::onKeyUp(const SDL_KeyboardEvent &event)
 
 void Application::onMouseButtonDown(const SDL_MouseButtonEvent &event)
 {
+    MouseButtonDownEvent mouseEvent;
+    mouseEvent.button = (MouseButton)event.button;
+    mouseEvent.position = glm::vec2(event.x, screenHeight - event.y);
+
+    if(colorBarWidget->getRectangle().containsPoint(mouseEvent.position))
+        colorBarWidget->processEvent(&mouseEvent);
 }
 
 void Application::onMouseButtonUp(const SDL_MouseButtonEvent &event)
 {
+    MouseButtonUpEvent mouseEvent;
+    mouseEvent.button = (MouseButton)event.button;
+    mouseEvent.position = glm::vec2(event.x, screenHeight - event.y);
+
+    if(colorBarWidget->getRectangle().containsPoint(mouseEvent.position))
+        colorBarWidget->processEvent(&mouseEvent);
 }
 
 } // namespace SVR
-
 

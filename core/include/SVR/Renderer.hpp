@@ -31,6 +31,8 @@ public:
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end) = 0;
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c) = 0;
     virtual void drawRectangle(const glm::vec2 &min, const glm::vec2 &max) = 0;
+    virtual void drawText(const glm::vec2 &position, const std::string &text) = 0;
+    virtual void drawGlyph(const glm::vec2 &sheetPosition, const glm::vec2 &sheetExtent, const glm::vec2 &position, const glm::vec2 &extent) = 0;
 
     virtual void setGammaCorrection(float gammaCorrection) = 0;
 

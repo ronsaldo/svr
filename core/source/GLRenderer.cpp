@@ -1,4 +1,5 @@
 #include "GLRenderer.hpp"
+#include "FreeTypeFont.hpp"
 
 namespace SVR
 {
@@ -30,6 +31,8 @@ public:
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end);
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
     virtual void drawRectangle(const glm::vec2 &min, const glm::vec2 &max);
+    virtual void drawText(const glm::vec2 &position, const std::string &text);
+    virtual void drawGlyph(const glm::vec2 &sheetPosition, const glm::vec2 &sheetExtent, const glm::vec2 &position, const glm::vec2 &extent);
 
     virtual void flushCommands();
 
@@ -60,6 +63,7 @@ private:
     void useGammaCorrectedMaterial(const Material &material);
 
     Vertex2D vertexForPosition(const glm::vec2 &position);
+    Vertex2D vertexForGlyph(const glm::vec2 &sheetPosition, const glm::vec2 &position);
 
     ProgramPtr colorProgram;
     ProgramPtr texturedProgram;
@@ -69,6 +73,9 @@ private:
     LocalMesh2DBuilder builder;
     BufferObjectPtr vertexBuffer;
     BufferObjectPtr indexBuffer;
+
+    // Font
+    FreeTypeFontPtr defaultFont;
 
     // Render state
     glm::vec2 screenSize;
@@ -102,7 +109,15 @@ bool GLRenderer::initialize(int argc, const char **argv)
     if(!loadPrograms())
         return false;
 
+    defaultFont = FreeTypeFont::loadFromFile("data/fonts/dejavu/DejaVuSans.ttf");
+    if(!defaultFont)
+        return false;
+
     create2DCanvas();
+
+    // Enable alpha blending.
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     return true;
 }
@@ -229,6 +244,39 @@ void GLRenderer::drawRectangle(const glm::vec2 &min, const glm::vec2 &max)
     builder.endSubMesh();
 }
 
+void GLRenderer::drawText(const glm::vec2 &position, const std::string &text)
+{
+    defaultFont->drawText(this, position, text);
+}
+
+void GLRenderer::drawGlyph(const glm::vec2 &sheetPosition, const glm::vec2 &sheetExtent, const glm::vec2 &position, const glm::vec2 &extent)
+{
+    auto glyphBottomLeft = sheetPosition;
+    auto glyphTopLeft = sheetPosition + glm::vec2(0.0, sheetExtent.y);
+    auto glyphTopRight = sheetPosition + sheetExtent;
+    auto glyphBottomRight = sheetPosition + glm::vec2(sheetExtent.x, 0.0);
+
+    auto bottomLeft = position;
+    auto topLeft = position + glm::vec2(0.0, extent.y);
+    auto topRight = position + extent;
+    auto bottomRight = position + glm::vec2(extent.x, 0.0);
+
+    builder.beginSubMesh(PrimitiveMode::Triangles, currentMaterial);
+    builder.addVertex(vertexForGlyph(glyphBottomLeft, bottomLeft));
+    builder.addVertex(vertexForGlyph(glyphTopLeft, topLeft));
+    builder.addVertex(vertexForGlyph(glyphTopRight, topRight));
+    builder.addVertex(vertexForGlyph(glyphBottomRight, bottomRight));
+
+    builder.addIndex(0);
+    builder.addIndex(1);
+    builder.addIndex(2);
+
+    builder.addIndex(2);
+    builder.addIndex(3);
+    builder.addIndex(0);
+    builder.endSubMesh();
+}
+
 Vertex2D GLRenderer::vertexForPosition(const glm::vec2 &position)
 {
     glm::vec3 transformedPosition = modelViewMatrix * glm::vec3(position, 1.0);
@@ -238,6 +286,17 @@ Vertex2D GLRenderer::vertexForPosition(const glm::vec2 &position)
     vertex.position = glm::vec2(transformedPosition);
     vertex.color = currentColor;
     vertex.texcoord = glm::vec2(transformedTexcoord);
+    return vertex;
+}
+
+Vertex2D GLRenderer::vertexForGlyph(const glm::vec2 &sheetPosition, const glm::vec2 &position)
+{
+    glm::vec3 transformedPosition = modelViewMatrix * glm::vec3(position, 1.0);
+
+    Vertex2D vertex;
+    vertex.position = glm::vec2(transformedPosition);
+    vertex.color = currentColor;
+    vertex.texcoord = sheetPosition;
     return vertex;
 }
 

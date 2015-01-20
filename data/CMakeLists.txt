@@ -2,6 +2,13 @@
 file(GLOB DATA_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     "shaders/*.glsl*"
     "kernels/*.cl"
+    "fonts/dejavu/*.ttf"
+    "fonts/dejavu/*.txt"
+    "fonts/dejavu/README"
+    "fonts/dejavu/AUTHORS"
+    "fonts/dejavu/BUGS"
+    "fonts/dejavu/LICENSE"
+    "fonts/dejavu/NEWS"
 )
 
 foreach(data_file ${DATA_FILES})

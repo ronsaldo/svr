@@ -107,7 +107,6 @@ private:
     float lengthSamplingFactor;
 
     // Cube data filtering
-    float filterMinValue, filterMaxValue;
     ComputeSamplerPtr currentSampler;
     ComputeSamplerPtr nearestSampler, linearSampler;
 

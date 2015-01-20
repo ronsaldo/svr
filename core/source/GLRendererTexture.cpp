@@ -61,7 +61,7 @@ inline GLenum mapFormat(PixelFormat pixelFormat)
     case PixelFormat::L8:
         return GL_LUMINANCE;
     case PixelFormat::I8:
-        return GL_INTENSITY;
+        return GL_LUMINANCE;
     case PixelFormat::R8:
         return GL_R;
     case PixelFormat::RG8:

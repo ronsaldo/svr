@@ -3,18 +3,20 @@
 
 #include "SVR/Interface.hpp"
 #include "SVR/Renderer.hpp"
+#include "SVR/Rectangle.hpp"
+#include "SVR/Event.hpp"
 
 namespace SVR
 {
 /**
  * 2D UI Widget
  */
-class Widget: public Interface
+class Widget: public EventHandler
 {
 public:
     Widget()
     {
-        backgroundColor = glm::vec4(0.5, 0.5, 0.5, 1.0);
+        backgroundColor = glm::vec4(0.2, 0.2, 0.2, 1.0);
     }
 
     ~Widget()
@@ -63,9 +65,28 @@ public:
         backgroundColor = newBackgroundColor;
     }
 
+    Rectangle getRectangle() const
+    {
+        return Rectangle::positionExtent(position, size);
+    }
+
     virtual void draw(const RendererPtr &renderer)
     {
         drawClipingContent(renderer);
+    }
+
+    virtual void processEvent(Event *event)
+    {
+        event->accept(this);
+    }
+
+public:
+    virtual void onMouseButtonDown(MouseButtonDownEvent *event)
+    {
+    }
+
+    virtual void onMouseButtonUp(MouseButtonUpEvent *event)
+    {
     }
 
 protected:

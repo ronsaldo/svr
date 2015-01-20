@@ -1,6 +1,7 @@
 #ifndef _SVR_COLOR_BAR_WIDGET_HPP_
 #define _SVR_COLOR_BAR_WIDGET_HPP_
 
+#include <algorithm>
 #include "SVR/Widget.hpp"
 
 namespace SVR
@@ -53,6 +54,29 @@ public:
         maxValue = newMaxValue;
     }
 
+public:
+    virtual void onMouseButtonDown(MouseButtonDownEvent *event)
+    {
+        auto value = event->position.y/getHeight();
+
+        switch(event->button)
+        {
+        case MouseButton::Left:
+            minValue = std::min(value, maxValue);
+            break;
+        case MouseButton::Right:
+            maxValue = std::max(value, minValue);
+            break;
+        default:
+            // Do nothing.
+            break;
+        }
+    }
+
+    virtual void onMouseButtonUp(MouseButtonUpEvent *event)
+    {
+    }
+
 protected:
     virtual void drawContent(const RendererPtr &renderer)
     {
@@ -74,22 +98,34 @@ protected:
             // Draw the min triangle
             renderer->setColor(glm::vec4(1.0, 0.0, 0.0, 1.0));
             drawTriangle(renderer, minValue);
+            drawValue(renderer, minValue);
 
             // Draw the max triangle
             renderer->setColor(glm::vec4(0.0, 0.0, 1.0, 1.0));
             drawTriangle(renderer, maxValue);
+            drawValue(renderer, maxValue);
         });
     }
 
 private:
+    static const int TriangleWidth = 20;
+    static const int TriangleHeight = 20;
+    static const int TriangleHalfHeight = TriangleHeight/2;
+
     void drawTriangle(const RendererPtr &renderer, float value)
     {
-        const float TriangleWidth = 20.0f;
-        const float TriangleHeight = 20.0f;
-        const float TriangleHalfHeight = TriangleHeight*0.5f;
 
         float y = getHeight() * value;
         renderer->drawTriangle(glm::vec2(0.0, y), glm::vec2(TriangleWidth, y + TriangleHalfHeight), glm::vec2(TriangleWidth, y - TriangleHalfHeight));
+    }
+
+    void drawValue(const RendererPtr &renderer, float value)
+    {
+        char buffer[256];
+        sprintf(buffer, "%f", value);
+
+        auto position = glm::vec2(TriangleWidth, getHeight() * value - TriangleHalfHeight + TriangleHalfHeight/2);
+        renderer->drawText(position, buffer);
     }
 
     Texture1DPtr gradient;
