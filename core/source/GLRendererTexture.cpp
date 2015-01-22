@@ -26,6 +26,21 @@ inline GLenum mapTextureFilter(TextureFilter filter)
     }
 }
 
+inline GLenum mapTextureWrapping(TextureWrapping wrapping)
+{
+    switch(wrapping)
+    {
+    case TextureWrapping::Repeat:
+        return GL_REPEAT;
+    case TextureWrapping::Clamp:
+        return GL_CLAMP;
+    case TextureWrapping::ClampToEdge:
+        return GL_CLAMP_TO_EDGE;
+    default:
+        abort();
+    }
+}
+
 inline GLenum mapInternalFormat(PixelFormat pixelFormat)
 {
     switch(pixelFormat)
@@ -123,6 +138,7 @@ GLTexture1D::GLTexture1D(GLuint handle, int width,PixelFormat pixelFormat)
 {
     magnificationFilter = TextureFilter::Linear;
     minificationFilter = TextureFilter::Linear;
+    wrapS = TextureWrapping::Repeat;
     update();
 }
 
@@ -149,6 +165,17 @@ void GLTexture1D::setMagnificationFilter(TextureFilter newFilter)
 void GLTexture1D::setMinificationFilter(TextureFilter newFilter)
 {
     minificationFilter = newFilter;
+    needsUpdate = true;
+}
+
+TextureWrapping GLTexture1D::getWrapS() const
+{
+    return wrapS;
+}
+
+void GLTexture1D::setWrapS(TextureWrapping wrapping)
+{
+    wrapS = wrapping;
     needsUpdate = true;
 }
 
@@ -199,6 +226,8 @@ void GLTexture1D::update()
 
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, mapTextureFilter(minificationFilter));
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, mapTextureFilter(magnificationFilter));
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, mapTextureWrapping(wrapS));
+
     needsUpdate = false;
 }
 
@@ -217,6 +246,8 @@ GLTexture2D::GLTexture2D(GLuint handle, int width, int height, PixelFormat pixel
 {
     magnificationFilter = TextureFilter::Linear;
     minificationFilter = TextureFilter::Linear;
+    wrapS = TextureWrapping::Repeat;
+    wrapT = TextureWrapping::Repeat;
     update();
 }
 
@@ -244,6 +275,26 @@ void GLTexture2D::setMinificationFilter(TextureFilter newFilter)
 {
     minificationFilter = newFilter;
     needsUpdate = true;
+}
+
+TextureWrapping GLTexture2D::getWrapS() const
+{
+    return wrapS;
+}
+
+void GLTexture2D::setWrapS(TextureWrapping wrapping)
+{
+    wrapS = wrapping;
+}
+
+TextureWrapping GLTexture2D::getWrapT() const
+{
+    return wrapT;
+}
+
+void GLTexture2D::setWrapT(TextureWrapping wrapping)
+{
+    wrapT = wrapping;
 }
 
 PixelFormat GLTexture2D::getPixelFormat() const
@@ -298,7 +349,21 @@ void GLTexture2D::update()
 
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, mapTextureFilter(minificationFilter));
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, mapTextureFilter(magnificationFilter));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, mapTextureWrapping(wrapS));
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, mapTextureWrapping(wrapT));
+
     needsUpdate = false;
+}
+
+void GLTexture2D::resize(int newWidth, int newHeight)
+{
+    if(width == newWidth && height == newHeight)
+        return;
+
+    bind();
+    width = newWidth;
+    height = newHeight;
+    allocateInDevice();
 }
 
 GLTexture2DPtr GLTexture2D::create(int width, int height, PixelFormat pixelFormat)

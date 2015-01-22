@@ -8,10 +8,14 @@
 
 namespace SVR
 {
+DECLARE_CLASS(Widget);
+DECLARE_CLASS(ContainerWidget);
+
 /**
  * 2D UI Widget
  */
-class Widget: public EventHandler
+class Widget: public EventHandler,
+    public std::enable_shared_from_this<Widget>
 {
 public:
     Widget()
@@ -21,6 +25,16 @@ public:
 
     ~Widget()
     {
+    }
+
+    ContainerWidgetPtr getParent() const
+    {
+        return parent.lock();
+    }
+
+    void setParent(const ContainerWidgetPtr &newParent)
+    {
+        parent = newParent;
     }
 
     float getWidth() const
@@ -81,6 +95,10 @@ public:
     }
 
 public:
+    virtual void onMouseMove(MouseMoveEvent *event)
+    {
+    }
+
     virtual void onMouseButtonDown(MouseButtonDownEvent *event)
     {
     }
@@ -122,6 +140,8 @@ private:
     glm::vec2 size;
 
     glm::vec4 backgroundColor;
+
+    ContainerWidgetWeakPtr parent;
 };
 
 } // namespace SVR

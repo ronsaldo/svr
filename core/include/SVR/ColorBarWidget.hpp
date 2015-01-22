@@ -2,6 +2,7 @@
 #define _SVR_COLOR_BAR_WIDGET_HPP_
 
 #include <algorithm>
+#include <functional>
 #include "SVR/Widget.hpp"
 
 namespace SVR
@@ -14,10 +15,13 @@ DECLARE_CLASS(ColorBarWidget)
 class ColorBarWidget: public Widget
 {
 public:
+    typedef std::function<double (double)> ValueMap;
+
     ColorBarWidget()
     {
         minValue = 0.0;
         maxValue = 1.0;
+        valueMap = identityValueMap();
     }
 
     ~ColorBarWidget()
@@ -52,6 +56,21 @@ public:
     void setMaxValue(float newMaxValue)
     {
         maxValue = newMaxValue;
+    }
+
+    const ValueMap &getValueMap() const
+    {
+        return valueMap;
+    }
+
+    void setValueMap(const ValueMap &newValueMap)
+    {
+        valueMap = newValueMap;
+    }
+
+    static ValueMap identityValueMap()
+    {
+        return [](double x) {return x; };
     }
 
 public:
@@ -122,7 +141,7 @@ private:
     void drawValue(const RendererPtr &renderer, float value)
     {
         char buffer[256];
-        sprintf(buffer, "%f", value);
+        sprintf(buffer, "%f", valueMap(value));
 
         auto position = glm::vec2(TriangleWidth, getHeight() * value - TriangleHalfHeight + TriangleHalfHeight/2);
         renderer->drawText(position, buffer);
@@ -130,6 +149,7 @@ private:
 
     Texture1DPtr gradient;
     float minValue, maxValue;
+    ValueMap valueMap;
 };
 
 } // namespace SVR

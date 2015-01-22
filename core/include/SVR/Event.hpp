@@ -7,6 +7,7 @@ namespace SVR
 {
 DECLARE_CLASS(EventHandler);
 DECLARE_CLASS(Event);
+DECLARE_CLASS(MouseMoveEvent);
 DECLARE_CLASS(MouseButtonDownEvent);
 DECLARE_CLASS(MouseButtonUpEvent);
 
@@ -27,6 +28,7 @@ enum class MouseButton
  */
 struct EventHandler: Interface
 {
+    virtual void onMouseMove(MouseMoveEvent *event) = 0;
     virtual void onMouseButtonDown(MouseButtonDownEvent *event) = 0;
     virtual void onMouseButtonUp(MouseButtonUpEvent *event) = 0;
 };
@@ -38,6 +40,34 @@ class Event: public Interface
 {
 public:
     virtual void accept(EventHandler *handler) = 0;
+
+    bool wasHandled() const
+    {
+        return handled;
+    }
+
+    void markAsHandled()
+    {
+        handled = true;
+    }
+
+private:
+    bool handled;
+};
+
+/**
+ * Mouse move event
+ */
+class MouseMoveEvent: public Event
+{
+public:
+    virtual void accept(EventHandler *handler)
+    {
+        handler->onMouseMove(this);
+    }
+
+    glm::vec2 position;
+    glm::vec2 delta;
 };
 
 /**

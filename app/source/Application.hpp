@@ -11,20 +11,17 @@
 #include "SVR/AABox.hpp"
 #include "SVR/AstronomyMappings.hpp"
 
+#include "SVR/ContainerWidget.hpp"
 #include "SVR/ColorBarWidget.hpp"
+#include "SVR/TextureWidget.hpp"
+#include "SVR/MenuBar.hpp"
+#include "SVR/StatusBar.hpp"
 
 #include "ColorMap.hpp"
+#include "DataScale.hpp"
 
 namespace SVR
 {
-/**
- * Cube mapping
- */
-enum DataScale
-{
-    Linear = 0,
-    Log
-};
 
 /**
  * The scalable volumetric renderer application.
@@ -41,12 +38,14 @@ public:
     void setColorMap(const ColorMapPtr &colorMap);
     void setColorMapNamed(const std::string &name);
 
-    void setDataScale(DataScale dataScale);
+    void setDataScale(const DataScalePtr &dataScale);
     void setDataScaleNamed(const std::string &name);
 
 private:
     void initializeDictionaries();
     bool initialize(int argc, const char **argv);
+    bool createWindowAndContext();
+
     bool initializeScene();
     bool initializeTextures();
     bool initializeComputation();
@@ -61,14 +60,20 @@ private:
 
     void processEvents();
     void render();
+    void render3D();
+    void render2D();
+
     void raycast();
     void update(float delta);
     void performScaleMapping();
 
     void onKeyDown(const SDL_KeyboardEvent &event);
     void onKeyUp(const SDL_KeyboardEvent &event);
+    void onMouseMove(const SDL_MouseMotionEvent &event);
     void onMouseButtonDown(const SDL_MouseButtonEvent &event);
     void onMouseButtonUp(const SDL_MouseButtonEvent &event);
+
+    void onWindowEvent(const SDL_WindowEvent &event);
 
     bool isQuitting;
     SDL_Window *window;
@@ -89,12 +94,13 @@ private:
 
     // Scene parameters
     int screenWidth, screenHeight;
+    bool fullscreen;
     float fovy;
     float gammaCorrection;
 
     // Data visualization scale
-    DataScale dataScale;
-    std::map<std::string, DataScale> dataScaleNameMap;
+    DataScalePtr dataScale;
+    std::map<std::string, DataScalePtr> dataScaleNameMap;
 
     // Raycasting parameters
     AABox cubeImageBox;
@@ -133,7 +139,13 @@ private:
     glm::vec3 cameraAngularVelocity;
 
     // UI
+    ContainerWidgetPtr screenWidget;
+
+    TextureWidgetPtr viewportWidget;
     ColorBarWidgetPtr colorBarWidget;
+    MenuBarPtr menuBar;
+    StatusBarPtr statusBar;
+    StatusBarEntryPtr cameraPositionDisplay;
 };
 
 }

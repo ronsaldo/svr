@@ -3,6 +3,7 @@
 
 #include "SVR/Interface.hpp"
 #include "SVR/TextureFilter.hpp"
+#include "SVR/TextureWrapping.hpp"
 #include "SVR/PixelFormat.hpp"
 
 namespace SVR
@@ -34,6 +35,9 @@ struct Texture: public Interface
  */
 struct Texture1D: public Texture
 {
+    virtual TextureWrapping getWrapS() const = 0;
+    virtual void setWrapS(TextureWrapping wrapping) = 0;
+
     virtual int getWidth() const = 0;
 };
 
@@ -42,8 +46,16 @@ struct Texture1D: public Texture
  */
 struct Texture2D: public Texture
 {
+    virtual TextureWrapping getWrapS() const = 0;
+    virtual void setWrapS(TextureWrapping wrapping) = 0;
+
+    virtual TextureWrapping getWrapT() const = 0;
+    virtual void setWrapT(TextureWrapping wrapping) = 0;
+
     virtual int getWidth() const = 0;
     virtual int getHeight() const = 0;
+
+    virtual void resize(int newWidth, int newHeight) = 0;
 };
 } // namespace SVR
 

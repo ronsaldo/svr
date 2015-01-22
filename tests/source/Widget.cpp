@@ -11,7 +11,7 @@ SUITE(Widget)
         auto widget = std::make_shared<Widget> ();
         CHECK(closeTo(widget->getPosition(), glm::vec2(0.0, 0.0)));
         CHECK(closeTo(widget->getSize(), glm::vec2(0.0, 0.0)));
-        CHECK(closeTo(widget->getBackgroundColor(), glm::vec4(0.5, 0.5, 0.5, 1.0)));
+        CHECK(closeTo(widget->getBackgroundColor(), glm::vec4(0.2, 0.2, 0.2, 1.0)));
     }
 
     TEST(ChangePosition)

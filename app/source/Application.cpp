@@ -1,6 +1,7 @@
 #include <string.h>
 
 #include "Application.hpp"
+#include "SVR/DockingLayout.hpp"
 
 namespace SVR
 {
@@ -10,6 +11,7 @@ Application::Application()
 {
     screenWidth = 640;
     screenHeight = 480;
+    fullscreen = false;
     fovy = 60.0;
     cubeFile = nullptr;
     gammaCorrection = 2.2;
@@ -21,7 +23,7 @@ Application::Application()
     lengthSamplingFactor = 1.5;
 
     colorMapName = "sls";
-    dataScale = DataScale::Linear;
+    dataScale = std::make_shared<LinearDataScale> ();
     initializeDictionaries();
 }
 
@@ -52,15 +54,9 @@ bool Application::initialize(int argc, const char **argv)
     if(!parseCommandLine(argc, argv))
         return false;
 
-    window = SDL_CreateWindow("SVR",
-                SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                screenWidth, screenHeight,  SDL_WINDOW_OPENGL);
-    if(!window)
-        fatalError("Failed to create window");
-
-    glContext = SDL_GL_CreateContext(window);
-    if(!glContext)
-        fatalError("Failed to create window");
+    // Create the window and the context
+    if(!createWindowAndContext())
+        return false;
 
     // Create the renderer.
     renderer = createRenderer();
@@ -92,6 +88,25 @@ bool Application::initialize(int argc, const char **argv)
     return true;
 }
 
+bool Application::createWindowAndContext()
+{
+    int flags = SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE;
+    if(fullscreen)
+        flags |= SDL_WINDOW_FULLSCREEN;
+
+    window = SDL_CreateWindow("SVR",
+                SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                screenWidth, screenHeight, flags);
+    if(!window)
+        fatalError("Failed to create window");
+
+    glContext = SDL_GL_CreateContext(window);
+    if(!glContext)
+        fatalError("Failed to create window");
+
+    return true;
+}
+
 bool Application::parseCommandLine(int argc, const char **argv)
 {
     for(int i = 1; i < argc; ++i)
@@ -103,6 +118,10 @@ bool Application::parseCommandLine(int argc, const char **argv)
         else if(!strcmp(argv[i], "-sh") && argv[++i])
         {
             screenHeight = atoi(argv[i]);
+        }
+        else if(!strcmp(argv[i], "-fullscreen"))
+        {
+            fullscreen = true;
         }
         else if(!strcmp(argv[i], "-fovy") && argv[++i])
         {
@@ -125,7 +144,7 @@ bool Application::parseCommandLine(int argc, const char **argv)
     return !cubeFileName.empty();
 }
 
-void Application::setDataScale(DataScale newDataScale)
+void Application::setDataScale(const DataScalePtr &newDataScale)
 {
     dataScale = newDataScale;
     // TODO: Perform the new mapping.
@@ -137,7 +156,7 @@ void Application::setDataScaleNamed(const std::string &name)
     if(it != dataScaleNameMap.end())
         setDataScale(it->second);
     else
-        setDataScale(DataScale::Linear);
+        setDataScale(std::make_shared<LinearDataScale> ());
 }
 
 bool Application::initializeTextures()
@@ -163,8 +182,8 @@ void Application::initializeDictionaries()
     colorMapNameDictionary["sls"] = ColorMap::sls();
     colorMapNameDictionary["haze"] = ColorMap::haze();
 
-    dataScaleNameMap["linear"] = DataScale::Linear;
-    dataScaleNameMap["log"] = DataScale::Log;
+    dataScaleNameMap["linear"] = std::make_shared<LinearDataScale> ();
+    dataScaleNameMap["log"] = std::make_shared<LogDataScale> ();
 }
 
 void Application::setColorMapNamed(const std::string &name)
@@ -174,7 +193,6 @@ void Application::setColorMapNamed(const std::string &name)
         setColorMap(it->second);
     else
         setColorMap(ColorMap::sls());
-
 }
 
 void Application::setColorMap(const ColorMapPtr &newColorMap)
@@ -188,6 +206,7 @@ void Application::setColorMap(const ColorMapPtr &newColorMap)
     }
 
     colorMapTexture = renderer->createTexture1D(colorMap->colors.size(), PixelFormat::RGBA32F);
+    colorMapTexture->setWrapS(TextureWrapping::ClampToEdge);
     colorMapTexture->upload(PixelFormat::RGBA32F, sizeof(glm::vec4)*colorMap->colors.size(), &colorMap->colors[0]);
 
     computeColorMap = computePlatform->createImageFromTexture1D(colorMapTexture);
@@ -240,10 +259,43 @@ bool Application::initializeScene()
 
 bool Application::initializeUI()
 {
+    screenWidget = std::make_shared<ContainerWidget> ();
+    screenWidget->setSize(glm::vec2(screenWidth, screenHeight));
+
+    // Menu bar
+    menuBar = std::make_shared<MenuBar> ();
+    screenWidget->add(menuBar);
+
+    // Status bar
+    statusBar = std::make_shared<StatusBar> ();
+    cameraPositionDisplay = statusBar->addEntry("", 2);
+    screenWidget->add(statusBar);
+
+    // Viewport widget
+    viewportWidget = std::make_shared<TextureWidget> ();
+    viewportWidget->setTexture(volumeColorBuffer);
+    screenWidget->add(viewportWidget);
+
+    // Color bar widget
     colorBarWidget = std::make_shared<ColorBarWidget> ();
-    colorBarWidget->setPosition(glm::vec2(screenWidth - 150, 0.0));
-    colorBarWidget->setSize(glm::vec2(150, screenHeight));
     colorBarWidget->setGradient(colorMapTexture);
+    screenWidget->add(colorBarWidget);
+
+    // Use the data scale.
+    colorBarWidget->setValueMap([this](double x) {
+        return dataScale->unmapValue(x);
+    });
+
+    // Layout
+    auto layout = std::make_shared<DockingLayout> ();
+    layout->topElement(menuBar, 0.05);
+    layout->bottomElement(statusBar, 0.05);
+    layout->centerElement(viewportWidget);
+    layout->rightElement(colorBarWidget, 0.2);
+
+    screenWidget->setLayout(layout);
+    screenWidget->setAutoLayout(true);
+    screenWidget->applyLayout();
 
     return true;
 }
@@ -255,17 +307,7 @@ void Application::performScaleMapping()
     std::unique_ptr<uint8_t[]> wholeData(new uint8_t[wholeSize]);
 
     // Map the cube.
-    switch(dataScale)
-    {
-    case DataScale::Linear:
-        mapFitsInto(LinearMapping(), cubeFile, wholeData.get());
-        break;
-    case DataScale::Log:
-        mapFitsInto(LogMapping(), cubeFile, wholeData.get());
-        break;
-    default:
-        break;
-    }
+    dataScale->mapFitsIntoU8(cubeFile, wholeData.get());
 
     // Create the compute buffer.
     if(!computeCubeBuffer)
@@ -354,6 +396,9 @@ void Application::processEvents()
         case SDL_QUIT:
             quit();
             break;
+        case SDL_WINDOWEVENT:
+            onWindowEvent(event.window);
+            break;
         }
     }
 }
@@ -369,6 +414,11 @@ void Application::update(float delta)
 
     auto oldPosition = camera->getPosition();
     camera->setPosition(oldPosition + glm::rotate(newRotation, cameraVelocity*(delta*LinearSpeed)));
+
+    char buffer[256];
+    auto newPosition = camera->getPosition();
+    sprintf(buffer, "x: %f y: %f z: %f", newPosition.x, newPosition.y, newPosition.z);
+    cameraPositionDisplay->setText(buffer);
 }
 
 void Application::computeCubeImageBox()
@@ -443,18 +493,41 @@ void Application::raycast()
     renderer->endCompute();
 }
 
-void Application::render()
+void Application::render3D()
 {
-    if(SDL_GL_MakeCurrent(window, glContext))
-        return;
-
     // Update the screen size.
-    auto extent = glm::vec2(screenWidth, screenHeight);
+    auto extent = viewportWidget->getSize();
     float aspect = extent.x/extent.y;
     camera->perspective(fovy, aspect, 0.01, 100.0);
 
+    // Update the volume color buffer
+    int width = ceil(extent.x);
+    int height = ceil(extent.y);
+    bool recreate = false;
+    if(volumeColorBuffer->getWidth() != width || volumeColorBuffer->getHeight() != height)
+    {
+        computeVolumeColorBuffer->destroy();
+        recreate = true;
+    }
+
+    volumeColorBuffer->resize(width, height);
+    
+    // Recreate the compute color buffer
+    if(recreate)
+    {
+        computeVolumeColorBuffer = computePlatform->createImageFromTexture2D(volumeColorBuffer);
+    }
+
     // Perform the rendering
     raycast();
+}
+
+void Application::render2D()
+{
+    auto extent = glm::vec2(screenWidth, screenHeight);
+
+    // Resize the screen color buffer.
+    screenColorBuffer->resize(screenWidth, screenHeight);
 
     // Draw to the screen.
     screenFramebuffer->activate();
@@ -464,10 +537,8 @@ void Application::render()
     renderer->clearColor(glm::vec4(0.0, 0.0, 0.0, 0.0));
     renderer->clear();
 
-    renderer->setTexture(volumeColorBuffer);
-    renderer->drawRectangle(glm::vec2(0.0, 0.0), extent);
-
-    colorBarWidget->draw(renderer);
+    // Draw the screen.
+    screenWidget->draw(renderer);
 
     renderer->flushCommands();
 
@@ -479,6 +550,15 @@ void Application::render()
     renderer->drawRectangle(glm::vec2(0.0, 0.0), extent);
 
     renderer->flushCommands();
+}
+
+void Application::render()
+{
+    if(SDL_GL_MakeCurrent(window, glContext))
+        return;
+
+    render3D();
+    render2D();
 
     SDL_GL_SwapWindow(window);
 }
@@ -574,14 +654,21 @@ void Application::onKeyUp(const SDL_KeyboardEvent &event)
     }
 }
 
+void Application::onMouseMove(const SDL_MouseMotionEvent &event)
+{
+    MouseMoveEvent mouseEvent;
+    mouseEvent.position = glm::vec2(event.x, screenHeight - event.y);
+
+    screenWidget->processEvent(&mouseEvent);
+}
+
 void Application::onMouseButtonDown(const SDL_MouseButtonEvent &event)
 {
     MouseButtonDownEvent mouseEvent;
     mouseEvent.button = (MouseButton)event.button;
     mouseEvent.position = glm::vec2(event.x, screenHeight - event.y);
 
-    if(colorBarWidget->getRectangle().containsPoint(mouseEvent.position))
-        colorBarWidget->processEvent(&mouseEvent);
+    screenWidget->processEvent(&mouseEvent);
 }
 
 void Application::onMouseButtonUp(const SDL_MouseButtonEvent &event)
@@ -590,8 +677,19 @@ void Application::onMouseButtonUp(const SDL_MouseButtonEvent &event)
     mouseEvent.button = (MouseButton)event.button;
     mouseEvent.position = glm::vec2(event.x, screenHeight - event.y);
 
-    if(colorBarWidget->getRectangle().containsPoint(mouseEvent.position))
-        colorBarWidget->processEvent(&mouseEvent);
+    screenWidget->processEvent(&mouseEvent);
+}
+
+void Application::onWindowEvent(const SDL_WindowEvent &event)
+{
+    switch(event.event)
+    {
+    case SDL_WINDOWEVENT_RESIZED:
+        screenWidget->setSize(glm::vec2(event.data1, event.data2));
+        screenWidth = event.data1;
+        screenHeight = event.data2;
+        break;
+    }
 }
 
 } // namespace SVR

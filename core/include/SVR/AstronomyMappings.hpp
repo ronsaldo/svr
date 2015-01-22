@@ -34,6 +34,11 @@ struct LinearMapping : SimpleMapping
     {
         return v*invMaxValue;
     }
+
+    double unmap(double v)
+    {
+        return v*maxValue;
+    }
 };
 
 /**
@@ -66,13 +71,21 @@ struct LogMapping : SimpleMapping
         else
 		    return this->norm*log(1.0 - this->exponent*this->numberOfColors*v*this->invMaxValue);
     }
+
+    double unmap(double v)
+    {
+        if(exponent >= 0)
+            return this->maxValue * (exp(v / this->norm) - 1.0) / (this->exponent * this->numberOfColors);
+        else
+            return this->maxValue * (1.0 - exp(v / this->norm)) / (this->exponent * this->numberOfColors);
+    }
 };
 
 namespace detail
 {
 
 template<typename FromType, typename Mapping, typename ToType>
-void mapFromTypeInto(Mapping mapping, FitsFile *input, ToType *dest)
+void mapFromTypeInto(Mapping &mapping, FitsFile *input, ToType *dest)
 {
     auto numberOfElements = input->getNumberOfElements();
     auto src = reinterpret_cast<const FromType*> (input->getImageData());
@@ -97,7 +110,7 @@ void mapFromTypeInto(Mapping mapping, FitsFile *input, ToType *dest)
 }
 
 template<typename FromType, typename ToType, typename Mapping>
-void mapFromTypeToTypeInto(Mapping mapping, FitsFile *input, FitsFile *output)
+void mapFromTypeToTypeInto(Mapping &mapping, FitsFile *input, FitsFile *output)
 {
     auto numberOfElements = input->getNumberOfElements();
     auto src = reinterpret_cast<const FromType*> (input->getImageData());
@@ -123,7 +136,7 @@ void mapFromTypeToTypeInto(Mapping mapping, FitsFile *input, FitsFile *output)
 }
 
 template<typename FromType, typename Mapping>
-void mapFromTypeInto(Mapping mapping, FitsFile *input, FitsFile *output)
+void mapFromTypeInto(Mapping &mapping, FitsFile *input, FitsFile *output)
 {
     switch(output->getFormat())
     {
@@ -153,7 +166,7 @@ void mapFromTypeInto(Mapping mapping, FitsFile *input, FitsFile *output)
 } // namespace detail
 
 template<typename Mapping>
-void mapFitsIntoFits(Mapping mapping, FitsFile *input, FitsFile *output)
+void mapFitsIntoFits(Mapping &mapping, FitsFile *input, FitsFile *output)
 {
     switch(input->getFormat())
     {
@@ -179,7 +192,7 @@ void mapFitsIntoFits(Mapping mapping, FitsFile *input, FitsFile *output)
 }
 
 template<typename Mapping, typename Output>
-void mapFitsInto(Mapping mapping, FitsFile *input, Output output)
+void mapFitsInto(Mapping &mapping, FitsFile *input, Output output)
 {
     switch(input->getFormat())
     {
@@ -203,7 +216,7 @@ void mapFitsInto(Mapping mapping, FitsFile *input, Output output)
         break;
     }
 }
-} // namespace ImageMapping
+} // namespace SVR
 
 #endif //_SVR_ASTRONOMY_MAPPINGS_HPP_
 

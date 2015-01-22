@@ -146,6 +146,9 @@ public:
     virtual void allocateInDevice();
     virtual void upload(PixelFormat format, size_t size, const void *data);
 
+    virtual TextureWrapping getWrapS() const;
+    virtual void setWrapS(TextureWrapping wrapping);
+
     void bind();
 
     static GLTexture1DPtr create(int width, PixelFormat pixelFormat);
@@ -161,6 +164,7 @@ private:
 
     TextureFilter magnificationFilter;
     TextureFilter minificationFilter;
+    TextureWrapping wrapS;
 
     bool needsUpdate;
 };
@@ -188,6 +192,14 @@ public:
     virtual void allocateInDevice();
     virtual void upload(PixelFormat format, size_t size, const void *data);
 
+    virtual void resize(int newWidth, int newHeight);
+
+    virtual TextureWrapping getWrapS() const;
+    virtual void setWrapS(TextureWrapping wrapping);
+
+    virtual TextureWrapping getWrapT() const;
+    virtual void setWrapT(TextureWrapping wrapping);
+
     void bind();
 
     static GLTexture2DPtr create(int width, int height, PixelFormat pixelFormat);
@@ -203,6 +215,7 @@ private:
 
     TextureFilter magnificationFilter;
     TextureFilter minificationFilter;
+    TextureWrapping wrapS, wrapT;
 
     bool needsUpdate;
 };
