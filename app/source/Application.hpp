@@ -14,6 +14,7 @@
 #include "SVR/ContainerWidget.hpp"
 #include "SVR/ColorBarWidget.hpp"
 #include "SVR/TextureWidget.hpp"
+#include "SVR/TitleBar.hpp"
 #include "SVR/MenuBar.hpp"
 #include "SVR/StatusBar.hpp"
 
@@ -100,6 +101,7 @@ private:
 
     // Data visualization scale
     DataScalePtr dataScale;
+    std::string dataScaleName;
     std::map<std::string, DataScalePtr> dataScaleNameMap;
 
     // Raycasting parameters
@@ -143,9 +145,11 @@ private:
 
     TextureWidgetPtr viewportWidget;
     ColorBarWidgetPtr colorBarWidget;
+    TitleBarPtr titleBar;
     MenuBarPtr menuBar;
     StatusBarPtr statusBar;
     StatusBarEntryPtr cameraPositionDisplay;
+    StatusBarEntryPtr scaleNameDisplay;
 };
 
 }

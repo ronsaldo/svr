@@ -24,6 +24,7 @@ Application::Application()
 
     colorMapName = "sls";
     dataScale = std::make_shared<LinearDataScale> ();
+    dataScaleName = "linear";
     initializeDictionaries();
 }
 
@@ -49,7 +50,7 @@ void Application::quit()
 
 bool Application::initialize(int argc, const char **argv)
 {
-    SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK);
 
     if(!parseCommandLine(argc, argv))
         return false;
@@ -154,9 +155,15 @@ void Application::setDataScaleNamed(const std::string &name)
 {
     auto it = dataScaleNameMap.find(name);
     if(it != dataScaleNameMap.end())
+    {
+        dataScaleName = name;
         setDataScale(it->second);
+    }
     else
+    {
+        dataScaleName = "linear";
         setDataScale(std::make_shared<LinearDataScale> ());
+    }
 }
 
 bool Application::initializeTextures()
@@ -248,6 +255,8 @@ bool Application::initializeScene()
     // Load the image cube.
     cubeFile = FitsFile::open(cubeFileName.c_str(), false);
     printf("Opened cube of size: %d %d %d\n", (int)cubeFile->getWidth(), (int)cubeFile->getHeight(), (int)cubeFile->getDepth());
+    for(auto &kv: cubeFile->getHeaderProperties())
+        printf("%s = %s\n", kv.first.c_str(), kv.second.c_str());
 
     performScaleMapping();
 
@@ -262,6 +271,11 @@ bool Application::initializeUI()
     screenWidget = std::make_shared<ContainerWidget> ();
     screenWidget->setSize(glm::vec2(screenWidth, screenHeight));
 
+    // Title bar
+    titleBar = std::make_shared<TitleBar> ();
+    titleBar->setText(cubeFileName);
+    screenWidget->add(titleBar);
+
     // Menu bar
     menuBar = std::make_shared<MenuBar> ();
     screenWidget->add(menuBar);
@@ -269,6 +283,7 @@ bool Application::initializeUI()
     // Status bar
     statusBar = std::make_shared<StatusBar> ();
     cameraPositionDisplay = statusBar->addEntry("", 2);
+    scaleNameDisplay = statusBar->addEntry(dataScaleName, 1);
     screenWidget->add(statusBar);
 
     // Viewport widget
@@ -289,6 +304,7 @@ bool Application::initializeUI()
     // Layout
     auto layout = std::make_shared<DockingLayout> ();
     layout->topElement(menuBar, 0.05);
+    layout->topElement(titleBar, 0.05);
     layout->bottomElement(statusBar, 0.05);
     layout->centerElement(viewportWidget);
     layout->rightElement(colorBarWidget, 0.2);
