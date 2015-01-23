@@ -182,6 +182,7 @@ bool Application::initializeTextures()
 
 void Application::initializeDictionaries()
 {
+    colorMapNameDictionary["gray"] = ColorMap::gray();
     colorMapNameDictionary["red"] = ColorMap::red();
     colorMapNameDictionary["green"] = ColorMap::green();
     colorMapNameDictionary["blue"] = ColorMap::blue();

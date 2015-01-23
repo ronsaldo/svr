@@ -69,6 +69,12 @@ if(NOT OpenCL_INCLUDE_DIR)
     message(SEND_ERROR "Failed to find OpenCL headers")
 endif()
 
+# Find DCMTK
+find_library(OFSTD_LIB ofstd)
+find_library(DCMDATA_LIB dcmdata)
+find_library(DCMIMGLE_LIB dcmimgle)
+find_library(DCMIMAGE_LIB dcmimage)
+
 # Use GLM, rapidxml
 include_directories(
 "${PROJECT_SOURCE_DIR}/thirdparty/glm"
@@ -128,6 +134,11 @@ add_subdirectory(app)
 
 # Build the data.
 add_subdirectory(data)
+
+# Add dicom2fits
+if(OFSTD_LIB AND DCMDATA_LIB AND DCMIMGLE_LIB AND DCMIMAGE_LIB)
+    add_subdirectory(dicom)
+endif()
 
 # Build the tests.
 if(UNITTESTMM_FOUND)
