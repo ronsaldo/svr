@@ -6,12 +6,13 @@ uniform sampler1D gradientTexture;
 uniform vec2 gradientStart;
 uniform vec2 gradientDirection;
 uniform float gradientLength;
+uniform float textureTexelSize;
 
 varying vec2 fTexCoord;
 
 void main()
 {
     float gradientCoord = dot(fTexCoord - gradientStart, gradientDirection)/gradientLength;
-    gl_FragData[0] = texture1D(gradientTexture, gradientCoord);
+    gl_FragData[0] = texture1D(gradientTexture, gradientCoord + textureTexelSize);
 }
 

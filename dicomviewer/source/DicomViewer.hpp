@@ -40,6 +40,9 @@ private:
     void render();
     void render2D();
 
+    void loadImage();
+    void flipVerticalAndUpload(int w, int h, const int16_t *data);
+
     SDL_Window *window;
     SDL_GLContext glContext;
     RendererPtr renderer;
@@ -50,7 +53,6 @@ private:
     bool imageChanged;
     int imageDepth;
 
-    void loadImage();
     bool quitting;
 
     Texture2DPtr currentImageTexture;

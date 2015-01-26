@@ -405,7 +405,8 @@ void GLRenderer::useLinearGradientMaterial(const Material &material)
 
     linearGradientProgram->uniformVec2("gradientStart", material.firstPoint);
     linearGradientProgram->uniformVec2("gradientDirection", glm::normalize(direction));
-    linearGradientProgram->uniformFloat("gradientLength", glm::length(direction));
+    linearGradientProgram->uniformFloat("gradientLength", glm::length(direction) / (1.0 - 1.0f / glTexture->getWidth()) );
+    linearGradientProgram->uniformFloat("textureTexelSize", 0.5f / glTexture->getWidth());
 }
 
 void GLRenderer::useGammaCorrectedMaterial(const Material &material)

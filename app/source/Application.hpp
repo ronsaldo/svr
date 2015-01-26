@@ -108,6 +108,9 @@ private:
     AABox cubeImageBox;
     AABox cubeViewRegion;
     float lengthScale;
+        
+    // Explicit cube map
+    bool explicitCubeImageBox;
 
     // Raycasting samples
     int minNumberOfSamples;

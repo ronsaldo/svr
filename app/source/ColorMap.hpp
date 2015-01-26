@@ -306,9 +306,15 @@ public:
     }
     static glm::vec4 uncorrectColor(const glm::vec4 &color)
     {
-        const float gamma = 2.2;
-        return glm::vec4(pow(color.r, gamma), pow(color.g, gamma), pow(color.b, gamma), color.a);
+        return glm::vec4(uncorrectChannel(color.r), uncorrectChannel(color.g), uncorrectChannel(color.b), color.a);
     }
+
+    static float uncorrectChannel(float v)
+    {
+        const float gamma = 2.2;
+        return pow(v, gamma);
+    }
+
 };
 
 } // namespace SVR

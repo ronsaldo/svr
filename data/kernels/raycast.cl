@@ -10,10 +10,11 @@ float filterValue(float value, float minValue, float maxValue )
 	return 1.0;
 }
 
-float4 sampleVolume(image3d_t volume, sampler_t volumeSampler, float4 point, image1d_t colorMap, float filterMinValue, float filterMaxValue)
+float4 sampleVolume(image3d_t volume, sampler_t volumeSampler, float4 point, image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMaxValue)
 {
+
 	float value = read_imagef(volume, volumeSampler, point).x;
-	float4 mappedValue = read_imagef(colorMap, ColorMapSampler, value);
+	float4 mappedValue = read_imagef(colorMap, ColorMapSampler, value*(1.0f - invColorMapSize) + invColorMapSize*0.5f);
 	return ((float4) (mappedValue.xyz, mappedValue.w*value))*filterValue(value, filterMinValue, filterMaxValue);
 }
 
@@ -56,7 +57,7 @@ float4 convertToCubeCoordinates(float3 point, float4 boxMin, float4 boxMax)
 }
 
 float4 integrate(__read_only image3d_t volume, float segmentLength, float4 startPoint, float4 endPoint, int minNumberOfSamples, int maxNumberOfSamples, float lengthSamplingFactor, float boxLength, float lengthScale, float4 cubeViewRegionMin, float4 cubeViewRegionMax, sampler_t cubeSampler, 
-image1d_t colorMap, float filterMinValue, float filterMaxValue)
+image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMaxValue)
 {
 	// Compute the number of samples and the step size to use.
 	float integrationLength = segmentLength;
@@ -65,15 +66,15 @@ image1d_t colorMap, float filterMinValue, float filterMaxValue)
 	float stepSize = 1.0 / (numberOfSteps - 1);
 	
 	// Endpoints for the trapezoidal rule
-	float4 result = sampleVolume(volume, cubeSampler, startPoint, colorMap, filterMinValue, filterMaxValue);
+	float4 result = sampleVolume(volume, cubeSampler, startPoint, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 
 	// Sample the inner points
 	for(int i = 1; i < numberOfSteps; ++i) {
 		float4 point = mix(startPoint, endPoint, i*stepSize);
 		float factor = (i & 1) ? 4.0f : 2.0f; 
-		result += factor*sampleVolume(volume, cubeSampler, point, colorMap, filterMinValue, filterMaxValue);
+		result += factor*sampleVolume(volume, cubeSampler, point, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 	}
-	result += sampleVolume(volume, cubeSampler, endPoint, colorMap, filterMinValue, filterMaxValue);
+	result += sampleVolume(volume, cubeSampler, endPoint, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 	result *= stepSize * scaleFactor / 3.0;
 	//result *= stepSize  / 3.0;
 	result.w = 1.0;
@@ -98,7 +99,7 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 	sampler_t cubeSampler,
 
     // Color mapping
-	image1d_t colorMap, float filterMinValue, float filterMaxValue,
+	image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMaxValue,
 
     // Color correction
 	float invGammaCorrectionFactor
@@ -139,7 +140,7 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 		
 		float4 startPointCube = convertToCubeCoordinates(startPoint, boxMin, boxMax);
 		float4 endPointCube = convertToCubeCoordinates(endPoint, boxMin, boxMax);
-		color = integrate(volume, length(endPoint - startPoint)/lengthScale, startPointCube, endPointCube, minNumberOfSamples, maxNumberOfSamples, lengthSamplingFactor, boxLength, lengthScale, cubeViewRegionMin, cubeViewRegionMax, cubeSampler, colorMap, filterMinValue, filterMaxValue);
+		color = integrate(volume, length(endPoint - startPoint)/lengthScale, startPointCube, endPointCube, minNumberOfSamples, maxNumberOfSamples, lengthSamplingFactor, boxLength, lengthScale, cubeViewRegionMin, cubeViewRegionMax, cubeSampler, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 	}
 
 	write_imagef(renderBuffer, coord,  pow(color, invGammaCorrectionFactor));

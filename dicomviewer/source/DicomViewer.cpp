@@ -165,6 +165,26 @@ void DicomViewer::onKeyUp(const SDL_KeyboardEvent &event)
 {
 }
 
+void DicomViewer::flipVerticalAndUpload(int w, int h, const int16_t *data)
+{
+    std::unique_ptr<int16_t[]> dest(new int16_t[w*h]);
+    auto destPitch = w;
+    auto srcPitch = -w;
+
+    auto destPtr = dest.get();
+    auto srcPtr = data + w*(h-1);
+    for(int y = 0; y < h; ++y)
+    {
+        for(int x = 0; x < w; ++x)
+            destPtr[x] = srcPtr[x];
+
+        destPtr += destPitch;
+        srcPtr += srcPitch;
+    }
+
+    currentImageTexture->upload(PixelFormat::L16, w*h*2, dest.get());
+}
+
 void DicomViewer::loadImage()
 {
     if(currentImageTexture && !imageChanged)
@@ -177,17 +197,16 @@ void DicomViewer::loadImage()
         size_t w = image->getWidth();
         size_t h = image->getHeight();
         imageDepth = image->getDepth();
-        size_t size = w*h;
         if(image->getStatus() == EIS_Normal)
         {
-            auto pixelData = reinterpret_cast<const uint16_t*> (image->getOutputData(16));
+            auto pixelData = reinterpret_cast<const int16_t*> (image->getOutputData(16));
             if(pixelData)
             {
                 if(!currentImageTexture)
                     currentImageTexture = renderer->createTexture2D(w, h, PixelFormat::L16);
                 else
                     currentImageTexture->resize(w,h);
-                currentImageTexture->upload(PixelFormat::L16, size, pixelData);
+                flipVerticalAndUpload(w, h, pixelData);
             }
         }
     }

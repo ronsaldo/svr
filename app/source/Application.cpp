@@ -140,6 +140,13 @@ bool Application::parseCommandLine(int argc, const char **argv)
         {
             setDataScaleNamed(argv[i]);
         }
+        else if(!strcmp(argv[i], "-cubeBox") && (++i) + 6 <= argc)
+        {
+            cubeImageBox.min = glm::vec3(atof(argv[i]), atof(argv[i+1]), atof(argv[i+2]));
+            cubeImageBox.max = glm::vec3(atof(argv[i+3]), atof(argv[i+4]), atof(argv[i+5]));
+            i += 5;
+            explicitCubeImageBox = true;
+        }
     }
 
     return !cubeFileName.empty();
@@ -440,6 +447,9 @@ void Application::update(float delta)
 
 void Application::computeCubeImageBox()
 {
+    if(explicitCubeImageBox)
+        return;
+
     auto cubeExtent = glm::vec3(cubeFile->getWidth(), cubeFile->getHeight(), cubeFile->getDepth());
     auto maxAxis = std::max(cubeExtent.x, std::max(cubeExtent.y, cubeExtent.z));
     auto cubeHalfExtent = cubeExtent * float(lengthScale * 0.5 / maxAxis);
@@ -494,11 +504,12 @@ void Application::raycast()
 
     // Color mapping
     kernel->setBufferArg(19, computeColorMap);
-    kernel->setFloatArg(20, colorBarWidget->getMinValue());
-    kernel->setFloatArg(21, colorBarWidget->getMaxValue());
+    kernel->setFloatArg(20, 1.0 / colorMapTexture->getWidth());
+    kernel->setFloatArg(21, colorBarWidget->getMinValue());
+    kernel->setFloatArg(22, colorBarWidget->getMaxValue());
 
     // Color correction
-    kernel->setFloatArg(22, 1.0);
+    kernel->setFloatArg(23, 1.0);
 
     // Run the rendering kernel
     //printf("Render frame %d %d\n", minNumberOfSamples, maxNumberOfSamples);

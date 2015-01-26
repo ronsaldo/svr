@@ -30,6 +30,23 @@ std::string intToString(int v)
     return buffer;
 }
 
+void flipVertical(int w, int h, const int16_t *source, int16_t *destPtr)
+{
+    auto destPitch = w;
+    auto srcPitch = -w;
+
+    auto srcPtr = source + w*(h-1);
+    for(int y = 0; y < h; ++y)
+    {
+        for(int x = 0; x < w; ++x)
+            destPtr[x] = swapBytes(srcPtr[x]);
+
+        destPtr += destPitch;
+        srcPtr += srcPitch;
+    }
+
+}
+
 void copyDicomInto(const std::string &inputFileName, size_t bufferSize, int16_t *outputBuffer)
 {
     // Clear the output, just in case.
@@ -45,8 +62,9 @@ void copyDicomInto(const std::string &inputFileName, size_t bufferSize, int16_t 
             auto pixelData = reinterpret_cast<const int16_t*> (image->getOutputData(16));
             if(pixelData)
             {
-                for(size_t i = 0; i < image->getWidth()*image->getHeight(); ++i)
-                    outputBuffer[i] = swapBytes(pixelData[i]);
+                flipVertical(image->getWidth(), image->getHeight(), pixelData, outputBuffer);
+                //for(size_t i = 0; i < image->getWidth()*image->getHeight(); ++i)
+                //    outputBuffer[i] = swapBytes(pixelData[i]);
                 //printf("Copying data from %s\n", inputFileName.c_str());
                 //memcpy(outputBuffer, pixelData, bufferSize);
             }
