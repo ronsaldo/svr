@@ -16,6 +16,8 @@ enum class PixelFormat
     RGB8,
     RGBA8,
 
+    L16,
+
     R32F,
     RG32F,
     RGBA32F,

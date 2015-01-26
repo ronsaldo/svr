@@ -27,6 +27,7 @@ public:
     virtual void setColor(const glm::vec4 &color) = 0;
     virtual void setTexture(const Texture2DPtr &texture) = 0;
     virtual void setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end) = 0;
+    virtual void setTextColor(const glm::vec4 &color) = 0;
 
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end) = 0;
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c) = 0;

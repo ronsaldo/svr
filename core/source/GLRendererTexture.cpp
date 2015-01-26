@@ -47,6 +47,9 @@ inline GLenum mapInternalFormat(PixelFormat pixelFormat)
     {
     case PixelFormat::L8:
         return GL_LUMINANCE8;
+    case PixelFormat::L16:
+        return GL_LUMINANCE16;
+
     case PixelFormat::I8:
         return GL_INTENSITY8;
     case PixelFormat::R8:
@@ -74,6 +77,8 @@ inline GLenum mapFormat(PixelFormat pixelFormat)
     switch(pixelFormat)
     {
     case PixelFormat::L8:
+    case PixelFormat::L16:
+
         return GL_LUMINANCE;
     case PixelFormat::I8:
         return GL_LUMINANCE;
@@ -108,6 +113,9 @@ inline GLenum mapType(PixelFormat pixelFormat)
     case PixelFormat::RGB8:
     case PixelFormat::RGBA8:
         return GL_UNSIGNED_BYTE;
+
+    case PixelFormat::L16:
+        return GL_UNSIGNED_SHORT;
 
     case PixelFormat::R32F:
     case PixelFormat::RG32F:

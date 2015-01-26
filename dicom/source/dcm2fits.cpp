@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include "SVR/Endianness.hpp"
 #include "SVR/FitsFile.hpp"
 
 #define HAVE_CONFIG_H
@@ -29,7 +30,7 @@ std::string intToString(int v)
     return buffer;
 }
 
-void copyDicomInto(const std::string &inputFileName, size_t bufferSize, uint8_t *outputBuffer)
+void copyDicomInto(const std::string &inputFileName, size_t bufferSize, int16_t *outputBuffer)
 {
     // Clear the output, just in case.
     memset(outputBuffer, 0, bufferSize);
@@ -37,15 +38,22 @@ void copyDicomInto(const std::string &inputFileName, size_t bufferSize, uint8_t 
     auto image = new DicomImage(inputFileName.c_str());
     if(image)
     {
-        if(image->getStatus() == EIS_Normal)
+        if(image->getStatus() == EIS_Normal &&
+            (int)image->getWidth() == width &&
+            (int)image->getHeight() == height)
         {
-            image->setMinMaxWindow();
-            auto pixelData = reinterpret_cast<const uint8_t*> (image->getOutputData(8));
+            auto pixelData = reinterpret_cast<const int16_t*> (image->getOutputData(16));
             if(pixelData)
             {
-                printf("Copying data from %s\n", inputFileName.c_str());
-                memcpy(outputBuffer, pixelData, bufferSize);
+                for(size_t i = 0; i < image->getWidth()*image->getHeight(); ++i)
+                    outputBuffer[i] = swapBytes(pixelData[i]);
+                //printf("Copying data from %s\n", inputFileName.c_str());
+                //memcpy(outputBuffer, pixelData, bufferSize);
             }
+        }
+        else
+        {
+            fprintf(stderr, "Failed to insert slice %s\n", inputFileName.c_str());
         }
     }
 
@@ -93,7 +101,7 @@ int main(int argc, const char **argv)
 
     // Create the FITS file properties.
     FitsHeaderProperties properties;
-    properties["BITPIX"] = "8";
+    properties["BITPIX"] = "16";
     properties["NAXIS"] = "3";
     properties["NAXIS1"] = intToString(width);
     properties["NAXIS2"] = intToString(height);
@@ -102,9 +110,9 @@ int main(int argc, const char **argv)
     // Create the output file
     auto slicePitch = width*height;
     auto outputDataSize = slicePitch*depth;
-    auto outputFits = FitsFile::create(outputFileName.c_str(), properties, outputDataSize);
+    auto outputFits = FitsFile::create(outputFileName.c_str(), properties, outputDataSize*2);
 
-    auto outputBuffer = reinterpret_cast<uint8_t*> (outputFits->getImageData());
+    auto outputBuffer = reinterpret_cast<int16_t*> (outputFits->getImageData());
 
     // Start writing the slices
     for(auto &inputFileName : inputFileNames)

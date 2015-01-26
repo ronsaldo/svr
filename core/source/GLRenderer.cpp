@@ -27,6 +27,7 @@ public:
     virtual void setColor(const glm::vec4 &color);
     virtual void setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end);
     virtual void setGammaCorrection(float gammaCorrection);
+    virtual void setTextColor(const glm::vec4 &color);
 
     virtual void drawLine(const glm::vec2 &start, const glm::vec2 &end);
     virtual void drawTriangle(const glm::vec2 &a, const glm::vec2 &b, const glm::vec2 &c);
@@ -86,11 +87,13 @@ private:
     glm::mat3 textureTransformMatrix;
     glm::mat3 textureCoordinateMatrix;
     glm::vec4 currentColor;
+    glm::vec4 currentTextColor;
     Material currentMaterial;
 };
 
 GLRenderer::GLRenderer()
 {
+    currentTextColor = glm::vec4(1,1,1,1);
 }
 
 GLRenderer::~GLRenderer()
@@ -199,6 +202,11 @@ void GLRenderer::setGammaCorrection(float gammaCorrection)
     currentMaterial.gamma = gammaCorrection;
 }
 
+void GLRenderer::setTextColor(const glm::vec4 &color)
+{
+    currentTextColor = color;
+}
+
 void GLRenderer::drawLine(const glm::vec2 &start, const glm::vec2 &end)
 {
     builder.beginSubMesh(PrimitiveMode::Lines, currentMaterial);
@@ -295,7 +303,7 @@ Vertex2D GLRenderer::vertexForGlyph(const glm::vec2 &sheetPosition, const glm::v
 
     Vertex2D vertex;
     vertex.position = glm::vec2(transformedPosition);
-    vertex.color = currentColor;
+    vertex.color = currentTextColor;
     vertex.texcoord = sheetPosition;
     return vertex;
 }

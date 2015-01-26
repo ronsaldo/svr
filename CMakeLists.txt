@@ -135,9 +135,10 @@ add_subdirectory(app)
 # Build the data.
 add_subdirectory(data)
 
-# Add dicom2fits
+# Add dicom2fits and dicomviewer
 if(OFSTD_LIB AND DCMDATA_LIB AND DCMIMGLE_LIB AND DCMIMAGE_LIB)
     add_subdirectory(dicom)
+    add_subdirectory(dicomviewer)
 endif()
 
 # Build the tests.
