@@ -47,6 +47,11 @@ if(NOT GLEW_LIB)
     message(SEND_ERROR "Failed to find GLEW")
 endif()
 
+find_path(GLEW_INCLUDE_PATH NAMES GL/glew.h)
+if(APPLE)
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -I${GLEW_INCLUDE_PATH}")
+endif()
+
 # Find freetype.
 find_package(Freetype)
 if(FREETYPE_FOUND)
@@ -63,7 +68,7 @@ if(NOT OpenCL_LIB)
     message(SEND_ERROR "Failed to find OpenCL library")
 endif()
 
-find_path(OpenCL_INCLUDE_DIR CL/cl.h
+find_path(OpenCL_INCLUDE_DIR NAMES CL/cl.h OpenCL/cl.h
          PATH_SUFFIXES CL)
 if(NOT OpenCL_INCLUDE_DIR)
     message(SEND_ERROR "Failed to find OpenCL headers")
@@ -114,8 +119,12 @@ else()
     )
 
     find_library(SDL2_LIBRARY NAMES SDL2 PATHS ${SDL2_LIBRARY_PATH})
+    if(WIN32)
 	find_library(SDL2_MAIN_LIBRARY NAMES SDL2main PATHS ${SDL2_LIBRARY_PATH})
-
+    else()
+	set(SDL2_MAIN_LIBRARY "")
+    endif()
+    
     set(SVR_DEP_LIBS ${SVR_DEP_LIBS} ${SDL2_LIBRARY} ${SDL2_MAIN_LIBRARY})
     include_directories("${SDL2_INCLUDE_DIR}")
 endif()

@@ -154,8 +154,9 @@ void Program::loadUniformIds()
         GLint size;
         GLenum type;
         glGetActiveUniform(handle, i, sizeof(buffer), nullptr, &size, &type, buffer);
+	auto location = glGetUniformLocation(handle, buffer);
 
-        uniformNameMap.insert(std::make_pair(buffer, i));
+        uniformNameMap.insert(std::make_pair(buffer, location));
     }
 }
 
@@ -168,31 +169,36 @@ GLint Program::uniformId(const std::string &name)
 void Program::uniformFloat(const std::string &name, float value)
 {
     auto location = uniformId(name);
-    glUniform1f(location, value);
+    if(location >= 0)
+    	glUniform1fv(location, 1, &value);
 }
 
 void Program::uniformVec2(const std::string &name, const glm::vec2 &vector)
 {
     auto location = uniformId(name);
-    glUniform2fv(location, 1, (float*)&vector);
+    if(location >= 0)
+	glUniform2fv(location, 1, (float*)&vector);
 }
 
 void Program::uniformVec3(const std::string &name, const glm::vec3 &vector)
 {
     auto location = uniformId(name);
-    glUniform3fv(location, 1, (float*)&vector);
+    if(location >= 0)
+	glUniform3fv(location, 1, (float*)&vector);
 }
 
 void Program::uniformVec4(const std::string &name, const glm::vec3 &vector)
 {
     auto location = uniformId(name);
-    glUniform4fv(location, 1, (float*)&vector);
+    if(location >= 0)
+	glUniform4fv(location, 1, (float*)&vector);
 }
 
 void Program::uniformMat4(const std::string &name, const glm::mat4 &matrix)
 {
     auto location = uniformId(name);
-    glUniformMatrix4fv(location, 1, GL_FALSE, &matrix[0][0]);
+    if(location >= 0)
+	glUniformMatrix4fv(location, 1, GL_FALSE, &matrix[0][0]);
 }
 
 } // namespace OpenGL

@@ -95,6 +95,10 @@ bool Application::createWindowAndContext()
     if(fullscreen)
         flags |= SDL_WINDOW_FULLSCREEN;
 
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    //SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
     window = SDL_CreateWindow("SVR",
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                 screenWidth, screenHeight, flags);

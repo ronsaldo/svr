@@ -5,6 +5,7 @@
 
 namespace SVR
 {
+DECLARE_CLASS(Material)
 
 /**
  * Material type
@@ -20,8 +21,9 @@ enum class MaterialType
 /**
  * Material structure
  */
-struct Material
+class Material
 {
+public:
     MaterialType type;
     TexturePtr texture;
     glm::vec2 firstPoint, secondPoint;
@@ -31,14 +33,9 @@ struct Material
     Material(MaterialType materialType)
         : type(materialType) {}
 
-    bool operator==(const Material &other) const
+    bool equals(const MaterialPtr &other) const
     {
-        return type == other.type && texture == other.texture;
-    }
-
-    bool operator!=(const Material &other) const
-    {
-        return type != other.type || texture != other.texture;
+        return type == other->type && texture == other->texture;
     }
 
     static Material solidColor()

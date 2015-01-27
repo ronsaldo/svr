@@ -5,7 +5,7 @@
 
 namespace SVR
 {
-DECLARE_CLASS(EventHandler);
+DECLARE_INTERFACE(EventHandler);
 DECLARE_CLASS(Event);
 DECLARE_CLASS(MouseMoveEvent);
 DECLARE_CLASS(MouseButtonDownEvent);

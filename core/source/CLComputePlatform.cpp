@@ -1,6 +1,17 @@
-#include <GL/glew.h>
+//#include "GL/glew.h"
+#if defined (__APPLE__) || defined(MACOSX)
+#include <OpenGL/CGLIOSurface.h>
+#include <OpenGL/CGLMacro.h>
+#include <OpenGL/gl.h>
+#include "OpenGL/glext.h"
+#include <OpenGL/OpenGL.h>
+#include <OpenCL/cl.h>
+#include <OpenCL/cl_gl.h>
+#include <OpenCL/cl_gl_ext.h>
+#else
 #include <CL/cl.h>
 #include <CL/cl_gl.h>
+#endif
 
 #if defined(__WIN32)
 #include <windows.h>
@@ -504,7 +515,11 @@ private:
     bool checkOpenGLSharing();
     bool isExtensionSupported(const std::string &extension);
 
+#if defined (__APPLE__) || defined(MACOSX)
+
+#else
     clGetGLContextInfoKHR_fn clGetGLContextInfoKHR;
+#endif
 
     cl_platform_id platform;
     cl_context context;
@@ -570,12 +585,16 @@ bool CLComputePlatform::checkOpenGLSharing()
     }
 
     // Load some extensions.
+#if defined (__APPLE__) || defined(MACOSX)
+
+#else
     clGetGLContextInfoKHR = (clGetGLContextInfoKHR_fn)clGetExtensionFunctionAddressForPlatform(platform, "clGetGLContextInfoKHR");
     if(!clGetGLContextInfoKHR)
     {
         logError("Failed to load clGetGLContextInfoKHR function address");
         return false;
     }
+#endif
 
     return true;
 }
@@ -607,6 +626,23 @@ bool CLComputePlatform::createContext()
     if(!checkOpenGLSharing())
         return false;
 
+#if defined (__APPLE__) || defined(MACOSX)
+// Get current CGL Context and CGL Share group
+CGLContextObj kCGLContext = CGLGetCurrentContext();
+CGLShareGroupObj kCGLShareGroup = CGLGetShareGroup(kCGLContext);
+// Create CL context properties, add handle & share-group enum
+cl_context_properties properties[] = {
+    CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
+    (cl_context_properties)kCGLShareGroup, 0
+};
+context = clCreateContext(properties, 0, 0, nullptr, 0, 0    );  
+
+cl_device_id devices[32];
+size_t size;
+clGetContextInfo(context, CL_CONTEXT_DEVICES, sizeof(devices), devices, &size);
+int numdevices = size / sizeof(devices[0]);
+
+#else
     // The opencl context properties
     cl_context_properties properties[] = {
 #if defined(_WIN32)
@@ -636,6 +672,7 @@ bool CLComputePlatform::createContext()
         logError("Failed to create OpenL context");
         return false;
     }
+#endif
 
     // Create the device wrappers.
     this->devicesIDs = std::vector<cl_device_id> (devices,  devices + numdevices);

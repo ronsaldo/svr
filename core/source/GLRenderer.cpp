@@ -55,13 +55,13 @@ private:
 
     void updateTextureMatrix();
     void useProgram(const ProgramPtr &program);
-    void useMaterial(const Material &material);
+    void useMaterial(const MaterialPtr &material);
     void drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, GLenum elementType);
 
-    void useSolidColorMaterial(const Material &material);
-    void useTexturedMaterial(const Material &material);
-    void useLinearGradientMaterial(const Material &material);
-    void useGammaCorrectedMaterial(const Material &material);
+    void useSolidColorMaterial(const MaterialPtr &material);
+    void useTexturedMaterial(const MaterialPtr &material);
+    void useLinearGradientMaterial(const MaterialPtr &material);
+    void useGammaCorrectedMaterial(const MaterialPtr &material);
 
     Vertex2D vertexForPosition(const glm::vec2 &position);
     Vertex2D vertexForGlyph(const glm::vec2 &sheetPosition, const glm::vec2 &position);
@@ -88,7 +88,7 @@ private:
     glm::mat3 textureCoordinateMatrix;
     glm::vec4 currentColor;
     glm::vec4 currentTextColor;
-    Material currentMaterial;
+    MaterialPtr currentMaterial;
 };
 
 GLRenderer::GLRenderer()
@@ -108,6 +108,10 @@ bool GLRenderer::initialize(int argc, const char **argv)
         logError("Failed to load OpenGL extensions");
         return false;
     }
+
+    printf("OpenGL Version: %s\n", glGetString(GL_VERSION));
+    printf("GLSL Version: %s\n", glGetString(GL_SHADING_LANGUAGE_VERSION));
+    //printf("OpenGL Extension: %s\n", glGetString(GL_EXTENSIONS));
 
     if(!loadPrograms())
         return false;
@@ -168,14 +172,14 @@ void GLRenderer::clear()
 
 void GLRenderer::setColor(const glm::vec4 &color)
 {
-    currentMaterial = Material(MaterialType::SolidColor);
+    currentMaterial = std::make_shared<Material> (MaterialType::SolidColor);
     currentColor = color;
 }
 
 void GLRenderer::setTexture(const Texture2DPtr &texture)
 {
-    currentMaterial = Material(MaterialType::Textured);
-    currentMaterial.texture = texture;
+    currentMaterial = std::make_shared<Material> (MaterialType::Textured);
+    currentMaterial->texture = texture;
     currentColor = glm::vec4(1.0, 1.0, 1.0, 1.0);
 
     textureCoordinateMatrix = glm::mat3();
@@ -186,10 +190,10 @@ void GLRenderer::setTexture(const Texture2DPtr &texture)
 
 void GLRenderer::setLinearGradient(const Texture1DPtr &texture, const glm::vec2 &start, const glm::vec2 &end)
 {
-    currentMaterial = Material(MaterialType::LinearGradient);
-    currentMaterial.texture = texture;
-    currentMaterial.firstPoint = start;
-    currentMaterial.secondPoint = end;
+    currentMaterial = std::make_shared<Material> (MaterialType::LinearGradient);
+    currentMaterial->texture = texture;
+    currentMaterial->firstPoint = start;
+    currentMaterial->secondPoint = end;
     currentColor = glm::vec4(1.0, 1.0, 1.0, 1.0);
 
     textureCoordinateMatrix = glm::mat3();
@@ -198,8 +202,8 @@ void GLRenderer::setLinearGradient(const Texture1DPtr &texture, const glm::vec2 
 
 void GLRenderer::setGammaCorrection(float gammaCorrection)
 {
-    currentMaterial.type = MaterialType::GammaCorrected;
-    currentMaterial.gamma = gammaCorrection;
+    currentMaterial->type = MaterialType::GammaCorrected;
+    currentMaterial->gamma = gammaCorrection;
 }
 
 void GLRenderer::setTextColor(const glm::vec4 &color)
@@ -312,7 +316,7 @@ void GLRenderer::flushCommands()
 {
     typedef Vertex2D VertexType;
 
-    auto &mesh = builder.localMesh;
+    auto &mesh = *builder.localMesh;
     if(mesh.vertices.empty() || mesh.indices.empty() || mesh.submeshes.empty())
         return;
 
@@ -359,9 +363,9 @@ void GLRenderer::useProgram(const ProgramPtr &program)
     program->uniformMat4("projectionMatrix", projectionMatrix);
 }
 
-void GLRenderer::useMaterial(const Material &material)
+void GLRenderer::useMaterial(const MaterialPtr &material)
 {
-    switch(material.type)
+    switch(material->type)
     {
     case MaterialType::SolidColor:
         useSolidColorMaterial(material);
@@ -381,42 +385,42 @@ void GLRenderer::useMaterial(const Material &material)
 
 }
 
-void GLRenderer::useSolidColorMaterial(const Material &material)
+void GLRenderer::useSolidColorMaterial(const MaterialPtr &material)
 {
     useProgram(colorProgram);
 }
 
-void GLRenderer::useTexturedMaterial(const Material &material)
+void GLRenderer::useTexturedMaterial(const MaterialPtr &material)
 {
     useProgram(texturedProgram);
 
-    auto glTexture = std::static_pointer_cast<GLTexture2D> (material.texture);
+    auto glTexture = std::static_pointer_cast<GLTexture2D> (material->texture);
     glTexture->bind();
 }
 
-void GLRenderer::useLinearGradientMaterial(const Material &material)
+void GLRenderer::useLinearGradientMaterial(const MaterialPtr &material)
 {
     useProgram(linearGradientProgram);
 
-    auto glTexture = std::static_pointer_cast<GLTexture1D> (material.texture);
+    auto glTexture = std::static_pointer_cast<GLTexture1D> (material->texture);
     glTexture->bind();
 
-    auto direction = material.secondPoint - material.firstPoint;
+    auto direction = material->secondPoint - material->firstPoint;
 
-    linearGradientProgram->uniformVec2("gradientStart", material.firstPoint);
+    linearGradientProgram->uniformVec2("gradientStart", material->firstPoint);
     linearGradientProgram->uniformVec2("gradientDirection", glm::normalize(direction));
     linearGradientProgram->uniformFloat("gradientLength", glm::length(direction) / (1.0 - 1.0f / glTexture->getWidth()) );
     linearGradientProgram->uniformFloat("textureTexelSize", 0.5f / glTexture->getWidth());
 }
 
-void GLRenderer::useGammaCorrectedMaterial(const Material &material)
+void GLRenderer::useGammaCorrectedMaterial(const MaterialPtr &material)
 {
     useProgram(gammaCorrectionProgram);
 
-    auto glTexture = std::static_pointer_cast<GLTexture2D> (material.texture);
+    auto glTexture = std::static_pointer_cast<GLTexture2D> (material->texture);
     glTexture->bind();
 
-    gammaCorrectionProgram->uniformFloat("inverseGammaFactor", 1.0 / material.gamma);
+    gammaCorrectionProgram->uniformFloat("inverseGammaFactor", 1.0 / material->gamma);
 }
 
 void GLRenderer::drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, GLenum elementType)
@@ -424,12 +428,12 @@ void GLRenderer::drawSubMeshes(const SubMeshes &submeshes, size_t elementSize, G
     // TODO: Select the proper program.
     for(auto &submesh: submeshes)
     {
-        useMaterial(submesh.material);
+        useMaterial(submesh->material);
 
-        auto mode = mapPrimitiveMode(submesh.primitiveMode);
-        size_t startIndexOffset = elementSize * submesh.startIndex;
-        glDrawRangeElements(mode, submesh.startVertex, submesh.endVertex,
-                            submesh.indexCount, elementType,
+        auto mode = mapPrimitiveMode(submesh->primitiveMode);
+        size_t startIndexOffset = elementSize * submesh->startIndex;
+        glDrawRangeElements(mode, submesh->startVertex, submesh->endVertex,
+                            submesh->indexCount, elementType,
                             reinterpret_cast<void*> (startIndexOffset));
 
     }

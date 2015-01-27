@@ -13,9 +13,8 @@ DECLARE_INTERFACE(Renderer);
 /**
  * The main window renderer interface.
  */
-class Renderer: public Interface
+struct Renderer: Interface
 {
-public:
     virtual bool initialize(int argc, const char **argv) = 0;
     virtual void shutdown() = 0;
 

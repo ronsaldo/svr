@@ -66,7 +66,7 @@ inline GLenum mapInternalFormat(PixelFormat pixelFormat)
     case PixelFormat::RG32F:
         return GL_RG32F;
     case PixelFormat::RGBA32F:
-        return GL_RGBA32F;
+        return GL_RGBA32F_ARB;
     default:
         abort();
     }

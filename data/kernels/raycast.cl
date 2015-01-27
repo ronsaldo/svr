@@ -75,9 +75,9 @@ image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMax
 		result += factor*sampleVolume(volume, cubeSampler, point, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 	}
 	result += sampleVolume(volume, cubeSampler, endPoint, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
-	result *= stepSize * scaleFactor / 3.0;
+	result *= stepSize * scaleFactor / 3.0f;
 	//result *= stepSize  / 3.0;
-	result.w = 1.0;
+	result.w = 1.0f;
 	return result;
 }
 
@@ -126,7 +126,7 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
     float3 rayOrigin = nearPoint.xyz;
     float3 rayTarget = farPoint.xyz;
 	float3 rayDirection = normalize(rayTarget - rayOrigin);
-	float3 rayInverseDirection = 1.0 / rayDirection;
+	float3 rayInverseDirection = 1.0f / rayDirection;
     float rayMaxParameter = dot(rayTarget - rayOrigin, rayDirection);
 
 	// Compute the ray intersection points.	

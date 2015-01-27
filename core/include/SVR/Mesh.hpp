@@ -8,27 +8,31 @@
 
 namespace SVR
 {
-/**
+DECLARE_CLASS(SubMesh)
+
+/*
  * SubMesh
  */
-struct SubMesh
+class SubMesh
 {
+public:
     int startIndex;
     int indexCount;
     int startVertex;
     int endVertex;
     PrimitiveMode primitiveMode;
-    Material material;
+    MaterialPtr material;
 };
 
-typedef std::vector<SubMesh> SubMeshes;
+typedef std::vector<SubMeshPtr> SubMeshes;
 
 /**
  * Mesh
  */
 template<typename VT, typename IT=unsigned short>
-struct Mesh
+class Mesh
 {
+public:
     typedef VT VertexType;
     typedef IT IndexType;
 

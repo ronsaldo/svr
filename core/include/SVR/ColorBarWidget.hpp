@@ -3,11 +3,17 @@
 
 #include <algorithm>
 #include <functional>
+#include <string>
 #include "SVR/Widget.hpp"
 
 namespace SVR
 {
 DECLARE_CLASS(ColorBarWidget)
+
+const int ColorBarTriangleWidth = 20;
+const int ColorBarTriangleHeight = 20;
+const int ColorBarTriangleHalfHeight = ColorBarTriangleHeight/2;
+ 
 
 /**
  * Color bar widget
@@ -127,15 +133,11 @@ protected:
     }
 
 private:
-    static const int TriangleWidth = 20;
-    static const int TriangleHeight = 20;
-    static const int TriangleHalfHeight = TriangleHeight/2;
-
     void drawTriangle(const RendererPtr &renderer, float value)
     {
 
         float y = getHeight() * value;
-        renderer->drawTriangle(glm::vec2(0.0, y), glm::vec2(TriangleWidth, y + TriangleHalfHeight), glm::vec2(TriangleWidth, y - TriangleHalfHeight));
+        renderer->drawTriangle(glm::vec2(0.0, y), glm::vec2(ColorBarTriangleWidth, y + ColorBarTriangleHalfHeight), glm::vec2(ColorBarTriangleWidth, y - ColorBarTriangleHalfHeight));
     }
 
     void drawValue(const RendererPtr &renderer, float value)
@@ -143,8 +145,9 @@ private:
         char buffer[256];
         sprintf(buffer, "%f", valueMap(value));
 
-        auto position = glm::vec2(TriangleWidth, getHeight() * value - TriangleHalfHeight + TriangleHalfHeight/2);
-        renderer->drawText(position, buffer);
+        auto position = glm::vec2(ColorBarTriangleWidth, getHeight() * value - ColorBarTriangleHalfHeight + ColorBarTriangleHalfHeight/2);
+        std::string text = buffer;
+	renderer->drawText(position, text);
     }
 
     Texture1DPtr gradient;
