@@ -51,6 +51,7 @@ private:
     bool initializeTextures();
     bool initializeComputation();
     bool parseCommandLine(int argc, const char **argv);
+    void printHelp();
 
     bool initializeUI();
 

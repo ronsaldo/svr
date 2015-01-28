@@ -114,6 +114,41 @@ bool Application::createWindowAndContext()
     return true;
 }
 
+void Application::printHelp()
+{
+printf(
+"SVR [options] -cube cubeFile\n"
+"-cube      <filename>  The data cube to display\n"
+"-sw        <int>       The screen width.\n"
+"-sh        <int>       The screen height.\n"
+"-fovy      <number>    The vertical field of view in degrees.\n"
+"-fullscreen            Use the fullscreen mode\n"
+"-colormap  <name>      The color map name\n"
+"-datascale <scale>     The data scale to use\n"
+"-cubeMappingBox  <nx ny nz px py pz>   The virtual space box to which the\n"
+"                                       volume is mapped.\n"
+"-averageSampling       Render in sample averaging mode.\n"
+"-sampleColorIntensity  <r g b a>       A color to multiply the samples.\n"
+"\n"
+"Available color maps:\n"
+"gray\n"
+"green\n"
+"blue\n"
+"rainbow\n"
+"sls\n"
+"haze\n"
+"\n"
+"Available data scales:\n"
+"linear\n"
+"log\n"
+"square\n"
+"sqrt\n"
+"sinh\n"
+"asinh\n"
+"\n"
+);
+}
+
 bool Application::parseCommandLine(int argc, const char **argv)
 {
     for(int i = 1; i < argc; ++i)
@@ -162,7 +197,17 @@ bool Application::parseCommandLine(int argc, const char **argv)
             sampleColorIntensity = glm::vec4(atof(argv[i]), atof(argv[i+1]), atof(argv[i+2]), atof(argv[i+3]));
             i += 3;
         }
+        else if(!strcmp(argv[i], "-h"))
+        {
+            printHelp();
+            exit(0);
+        }
+    }
 
+    if(cubeFileName.empty())
+    {
+        printHelp();
+        return false;
     }
 
     return !cubeFileName.empty();
