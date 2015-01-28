@@ -81,6 +81,131 @@ struct LogMapping : SimpleMapping
     }
 };
 
+/**
+ * Square mapping.
+ */
+struct SquareMapping : SimpleMapping
+{
+    double norm;
+
+    void setup(double minValue, double maxValue)
+    {
+        this->minValue = minValue;
+        this->maxValue = maxValue;
+        this->invMaxValue = 1.0 / maxValue;
+        this->norm = 1.0;
+    }
+
+    double map(double v)
+    {
+        auto nv = v*invMaxValue;
+        return this->norm*nv*nv;
+    }
+
+    double unmap(double v)
+    {
+        auto nv = v/this->norm;
+        return sqrt(nv)*maxValue;
+    }
+};
+
+/**
+ * Square root mapping.
+ */
+struct SquareRootMapping : SimpleMapping
+{
+    double norm;
+
+    void setup(double minValue, double maxValue)
+    {
+        this->minValue = minValue;
+        this->maxValue = maxValue;
+        this->invMaxValue = 1.0 / maxValue;
+        this->norm = 1.0;
+    }
+
+    double map(double v)
+    {
+        auto nv = v*invMaxValue;
+        return this->norm*sqrt(nv);
+    }
+
+    double unmap(double v)
+    {
+        auto nv = v/this->norm;
+        return nv*nv*maxValue;
+    }
+};
+
+/**
+ * Hiperbolic sine
+ */
+inline double sinh(double x)
+{
+    return 0.5*(exp(x) - exp(-x));
+}
+
+/**
+ * Hiperbolic arc sine.
+ */
+inline double arcsinh(double x)
+{
+    return log(x + sqrt(x*x + 1.0));
+}
+
+
+/**
+ * Sinh mapping.
+ */
+struct SinhMapping : SimpleMapping
+{
+    double norm;
+
+    void setup(double minValue, double maxValue)
+    {
+        this->minValue = minValue;
+        this->maxValue = maxValue;
+        this->invMaxValue = 1.0 / maxValue;
+        this->norm = 1.0;
+    }
+
+    double map(double v)
+    {
+        return this->norm*sinh(v*this->invMaxValue);
+    }
+
+    double unmap(double v)
+    {
+        return this->maxValue*arcsinh(v/this->norm);
+    }
+};
+
+/**
+ * ASinh mapping.
+ */
+struct ASinhMapping : SimpleMapping
+{
+    double norm;
+
+    void setup(double minValue, double maxValue)
+    {
+        this->minValue = minValue;
+        this->maxValue = maxValue;
+        this->invMaxValue = 1.0 / maxValue;
+        this->norm = 1.0;
+    }
+
+    double map(double v)
+    {
+        return this->norm*arcsinh(v*this->invMaxValue);
+    }
+
+    double unmap(double v)
+    {
+        return this->maxValue*sinh(v/this->norm);
+    }
+};
+
 namespace detail
 {
 

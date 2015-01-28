@@ -116,6 +116,8 @@ private:
     int minNumberOfSamples;
     int maxNumberOfSamples;
     float lengthSamplingFactor;
+    glm::vec4 sampleColorIntensity;
+    bool averageSamples;
 
     // Cube data filtering
     ComputeSamplerPtr currentSampler;

@@ -21,6 +21,8 @@ Application::Application()
 
     minNumberOfSamples = 20;
     lengthSamplingFactor = 1.5;
+    sampleColorIntensity = glm::vec4(1.0, 1.0, 1.0, 1.0);
+    averageSamples = false;
 
     colorMapName = "sls";
     dataScale = std::make_shared<LinearDataScale> ();
@@ -144,13 +146,23 @@ bool Application::parseCommandLine(int argc, const char **argv)
         {
             setDataScaleNamed(argv[i]);
         }
-        else if(!strcmp(argv[i], "-cubeBox") && (++i) + 6 <= argc)
+        else if(!strcmp(argv[i], "-cubeMappingBox") && (++i) + 6 <= argc)
         {
             cubeImageBox.min = glm::vec3(atof(argv[i]), atof(argv[i+1]), atof(argv[i+2]));
             cubeImageBox.max = glm::vec3(atof(argv[i+3]), atof(argv[i+4]), atof(argv[i+5]));
             i += 5;
             explicitCubeImageBox = true;
         }
+        else if(!strcmp(argv[i], "-averageSampling"))
+        {
+            averageSamples = true;
+        }
+        else if(!strcmp(argv[i], "-sampleColorIntensity") && (++i) + 4 <= argc)
+        {
+            sampleColorIntensity = glm::vec4(atof(argv[i]), atof(argv[i+1]), atof(argv[i+2]), atof(argv[i+3]));
+            i += 3;
+        }
+
     }
 
     return !cubeFileName.empty();
@@ -203,6 +215,10 @@ void Application::initializeDictionaries()
 
     dataScaleNameMap["linear"] = std::make_shared<LinearDataScale> ();
     dataScaleNameMap["log"] = std::make_shared<LogDataScale> ();
+    dataScaleNameMap["square"] = std::make_shared<SquareDataScale> ();
+    dataScaleNameMap["sqrt"] = std::make_shared<SquareRootDataScale> ();
+    dataScaleNameMap["sinh"] = std::make_shared<SinhDataScale> ();
+    dataScaleNameMap["asinh"] = std::make_shared<ASinhDataScale> ();
 }
 
 void Application::setColorMapNamed(const std::string &name)
@@ -514,6 +530,10 @@ void Application::raycast()
 
     // Color correction
     kernel->setFloatArg(23, 1.0);
+
+    // Extra modes
+    kernel->setIntArg(24, averageSamples);
+    kernel->setFloat4Arg(25, sampleColorIntensity);
 
     // Run the rendering kernel
     //printf("Render frame %d %d\n", minNumberOfSamples, maxNumberOfSamples);

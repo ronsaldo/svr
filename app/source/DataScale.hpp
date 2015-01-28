@@ -55,6 +55,10 @@ private:
 
 typedef AstronomyDataScale<LinearMapping> LinearDataScale;
 typedef AstronomyDataScale<LogMapping> LogDataScale;
+typedef AstronomyDataScale<SquareMapping> SquareDataScale;
+typedef AstronomyDataScale<SquareRootMapping> SquareRootDataScale;
+typedef AstronomyDataScale<SinhMapping> SinhDataScale;
+typedef AstronomyDataScale<ASinhMapping> ASinhDataScale;
 
 
 
