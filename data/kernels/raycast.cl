@@ -88,7 +88,7 @@ image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMax
 	result += sampleColorIntensity*sampleVolume(volume, cubeSampler, endPoint, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 
     if(averageSamples)
-    	result *= stepSize  / 3.0;
+    	result *= stepSize  / 3.0f;
     else
 	    result *= stepSize * scaleFactor / 3.0f;
 
