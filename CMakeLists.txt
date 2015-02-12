@@ -88,6 +88,10 @@ include_directories(
 
 set(SVR_DEP_LIBS ${ZLIB_LIBRARIES} ${OpenCL_LIB} ${GLEW_LIB} ${OPENGL_gl_LIBRARY} ${FREETYPE_LIBRARIES})
 
+# Set output dir.
+set(EXECUTABLE_OUTPUT_PATH "${SVR_BINARY_DIR}/dist")
+set(LIBRARY_OUTPUT_PATH "${SVR_BINARY_DIR}/dist")
+
 # Use pkg-config.
 find_package(PkgConfig)
 if(PKG_CONFIG_FOUND)
@@ -105,9 +109,6 @@ if(PKG_CONFIG_FOUND)
     # Leng dependencies libraries
     set(SVR_DEP_LIBS ${SDL2_LIBRARIES} ${SVR_DEP_LIBS})
 
-    # Set output dir.
-    set(EXECUTABLE_OUTPUT_PATH "${SVR_BINARY_DIR}/dist")
-    set(LIBRARY_OUTPUT_PATH "${SVR_BINARY_DIR}/dist")
 else()
     # For VisualStudio in Window
     find_path(SDL2_INCLUDE_DIR
