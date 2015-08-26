@@ -23,6 +23,7 @@ Application::Application()
     lengthSamplingFactor = 1.5;
     sampleColorIntensity = glm::vec4(1.0, 1.0, 1.0, 1.0);
     averageSamples = false;
+    explicitCubeImageBox = false;
 
     colorMapName = "sls";
     dataScale = std::make_shared<LinearDataScale> ();
