@@ -94,7 +94,7 @@ set(LIBRARY_OUTPUT_PATH "${SVR_BINARY_DIR}/dist")
 
 # Use pkg-config.
 find_package(PkgConfig)
-if(PKG_CONFIG_FOUND)
+if(PKG_CONFIG_FOUND AND NOT APPLE)
 
     # Find SDL2
     pkg_check_modules(SDL2 REQUIRED sdl2)
