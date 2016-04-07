@@ -208,6 +208,31 @@ struct ASinhMapping : SimpleMapping
 
 namespace detail
 {
+template<typename T>
+T minIgnoreNaN(T a, T b)
+{
+	if(isnan(a))
+		return b;
+	else if(isnan(b))
+		return a;
+	else if(a < b)
+		return a;
+	else
+		return b;
+}
+
+template<typename T>
+T maxIgnoreNaN(T a, T b)
+{
+	if(isnan(a))
+		return b;
+	else if(isnan(b))
+		return a;
+	else if(a > b)
+		return a;
+	else
+		return b;
+}
 
 template<typename FromType, typename Mapping, typename ToType>
 void mapFromTypeInto(Mapping &mapping, FitsFile *input, ToType *dest)
@@ -223,8 +248,8 @@ void mapFromTypeInto(Mapping &mapping, FitsFile *input, ToType *dest)
     for(size_t i = 1; i < numberOfElements; ++i)
     {
         auto value = swapBytes<FromType> (*src++);
-        minValue = std::min(minValue, value);
-        maxValue = std::max(maxValue, value);
+        minValue = minIgnoreNaN(minValue, value);
+        maxValue = maxIgnoreNaN(maxValue, value);
     }
 
     mapping.setup(minValue, maxValue);
