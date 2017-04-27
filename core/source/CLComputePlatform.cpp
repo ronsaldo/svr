@@ -319,7 +319,9 @@ void CLComputeKernel::setBufferArg(int arg, const ComputeBufferPtr &buffer)
 {
     auto clBuffer = std::static_pointer_cast<CLComputeBuffer> (buffer);
     auto clBufferHandle = clBuffer->getMem();
-    clSetKernelArg(kernel, arg, sizeof(clBufferHandle), &clBufferHandle);
+    auto error = clSetKernelArg(kernel, arg, sizeof(clBufferHandle), &clBufferHandle);
+    if(error)
+        printf("Set buffer %d := %p arg error: %d\n", arg, clBufferHandle, error);
 }
 
 void CLComputeKernel::setSamplerArg(int arg, const ComputeSamplerPtr &sampler)
@@ -635,7 +637,7 @@ cl_context_properties properties[] = {
     CL_CONTEXT_PROPERTY_USE_CGL_SHAREGROUP_APPLE,
     (cl_context_properties)kCGLShareGroup, 0
 };
-context = clCreateContext(properties, 0, 0, nullptr, 0, 0    );  
+context = clCreateContext(properties, 0, 0, nullptr, 0, 0    );
 
 cl_device_id devices[32];
 size_t size;
@@ -663,7 +665,7 @@ int numdevices = size / sizeof(devices[0]);
     cl_device_id devices[32];
     size_t size;
     clGetGLContextInfoKHR(properties, CL_DEVICES_FOR_GL_CONTEXT_KHR, sizeof(devices), devices, &size);
-    
+
     // Create a context using the supported devices
     int numdevices = size / sizeof(devices[0]);
     context = clCreateContext(properties, numdevices, devices, nullptr, 0, 0);
@@ -812,7 +814,7 @@ ComputeBufferPtr CLComputePlatform::createImageFromTexture1D(const Texture1DPtr 
 
 ComputeBufferPtr CLComputePlatform::createImageFromTexture2D(const Texture2DPtr &texture)
 {
-    
+
     auto handle = (GLuint)(size_t)texture->getHandle();
     cl_int err;
     auto image = clCreateFromGLTexture(context, CL_MEM_READ_WRITE, GL_TEXTURE_2D, 0, handle, &err);

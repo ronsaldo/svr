@@ -109,7 +109,7 @@ private:
     AABox cubeImageBox;
     AABox cubeViewRegion;
     float lengthScale;
-        
+
     // Explicit cube map
     bool explicitCubeImageBox;
 
@@ -146,6 +146,12 @@ private:
     glm::vec3 cameraAngle;
     glm::vec3 cameraAngularVelocity;
 
+    // Slice range
+    SliceRange xSlice;
+    SliceRange ySlice;
+    SliceRange zSlice;
+
+
     // UI
     ContainerWidgetPtr screenWidget;
 
@@ -161,4 +167,3 @@ private:
 }
 
 #endif // _SVR_APPLICATION_HPP_
-

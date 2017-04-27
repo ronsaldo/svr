@@ -13,7 +13,7 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 # Output paths.
 set(CMAKE_DEBUG_POSTFIX "_d")
- 
+
 set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist")
 set(SVR_DATA_PREFIX "${CMAKE_CURRENT_BINARY_DIR}/dist/data")
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/;${CMAKE_MODULE_PATH}")
@@ -24,7 +24,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11")
-	
+
 	# Export symbols from applications.
 	#set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--export-dynamic")
 endif()
@@ -42,7 +42,7 @@ if(NOT OPENGL_FOUND)
 endif()
 
 # Find GLEW
-find_library(GLEW_LIB GLEW)
+find_library(GLEW_LIB GLEW PATHS /usr/lib/Cellar/glew/1.13.0/lib/ NO_DEFAULT_PATH)
 if(NOT GLEW_LIB)
     message(SEND_ERROR "Failed to find GLEW")
 endif()
@@ -125,7 +125,7 @@ else()
     else()
 	set(SDL2_MAIN_LIBRARY "")
     endif()
-    
+
     set(SVR_DEP_LIBS ${SVR_DEP_LIBS} ${SDL2_LIBRARY} ${SDL2_MAIN_LIBRARY})
     include_directories("${SDL2_INCLUDE_DIR}")
 endif()
@@ -143,7 +143,7 @@ add_subdirectory(core)
 add_subdirectory(app)
 
 # Build the data.
-add_subdirectory(data)
+#add_subdirectory(data)
 
 # Add dicom2fits and dicomviewer
 if(OFSTD_LIB AND DCMDATA_LIB AND DCMIMGLE_LIB AND DCMIMAGE_LIB)

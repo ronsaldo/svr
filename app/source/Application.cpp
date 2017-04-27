@@ -130,6 +130,9 @@ printf(
 "-cubeMappingBox  <nx ny nz px py pz>   The virtual space box to which the\n"
 "                                       volume is mapped.\n"
 "-sampleColorIntensity  <r g b a>       A color to multiply the samples.\n"
+"-xSlice  <start> <size>       X axis slice.\n"
+"-ySlice  <start> <size>       Y axis slice.\n"
+"-zSlice  <start> <size>       Z axis slice.\n"
 "\n"
 "Available color maps:\n"
 "gray\n"
@@ -197,6 +200,24 @@ bool Application::parseCommandLine(int argc, const char **argv)
         {
             sampleColorIntensity = glm::vec4(atof(argv[i]), atof(argv[i+1]), atof(argv[i+2]), atof(argv[i+3]));
             i += 3;
+        }
+        else if(!strcmp(argv[i], "-xSlice") && (++i) + 2 <= argc)
+        {
+            xSlice.start = atoi(argv[i]);
+            xSlice.size = atoi(argv[i+1]);
+            i += 1;
+        }
+        else if(!strcmp(argv[i], "-ySlice") && (++i) + 2 <= argc)
+        {
+            ySlice.start = atoi(argv[i]);
+            ySlice.size = atoi(argv[i+1]);
+            i += 1;
+        }
+        else if(!strcmp(argv[i], "-zSlice") && (++i) + 2 <= argc)
+        {
+            zSlice.start = atoi(argv[i]);
+            zSlice.size = atoi(argv[i+1]);
+            i += 1;
         }
         else if(!strcmp(argv[i], "-h"))
         {
@@ -329,6 +350,21 @@ bool Application::initializeScene()
     // Load the image cube.
     cubeFile = FitsFile::open(cubeFileName.c_str(), false);
     printf("Opened cube of size: %d %d %d\n", (int)cubeFile->getWidth(), (int)cubeFile->getHeight(), (int)cubeFile->getDepth());
+    if(!xSlice.isValid())
+        xSlice.setWholeSize(cubeFile->getWidth());
+    else
+        xSlice.clampToRange(0, cubeFile->getWidth());
+
+    if(!ySlice.isValid())
+        ySlice.setWholeSize(cubeFile->getHeight());
+    else
+        ySlice.clampToRange(0, cubeFile->getHeight());
+
+    if(!zSlice.isValid())
+        zSlice.setWholeSize(cubeFile->getDepth());
+    else
+        zSlice.clampToRange(0, cubeFile->getDepth());
+
     for(auto &kv: cubeFile->getHeaderProperties())
         printf("%s = %s\n", kv.first.c_str(), kv.second.c_str());
 
@@ -393,15 +429,20 @@ bool Application::initializeUI()
 void Application::performScaleMapping()
 {
     // Allocate space for the mapped fits
-    size_t wholeSize = cubeFile->getWidth()*cubeFile->getHeight()*cubeFile->getDepth();
+    size_t wholeSize = xSlice.size*ySlice.size*zSlice.size;
     std::unique_ptr<uint8_t[]> wholeData(new uint8_t[wholeSize]);
 
     // Map the cube.
-    dataScale->mapFitsIntoU8(cubeFile, wholeData.get());
+    dataScale->mapFitsIntoU8(cubeFile, wholeData.get(), xSlice, ySlice, zSlice);
 
     // Create the compute buffer.
     if(!computeCubeBuffer)
-        computeCubeBuffer = computePlatform->createImage3D(PixelFormat::L8, cubeFile->getWidth(), cubeFile->getHeight(), cubeFile->getDepth(), cubeFile->getWidth(), cubeFile->getWidth()*cubeFile->getHeight(), (char*)wholeData.get());
+    {
+        computeCubeBuffer = computePlatform->createImage3D(PixelFormat::L8,
+            xSlice.size, ySlice.size, zSlice.size,
+            xSlice.size,
+            xSlice.size*ySlice.size, (char*)wholeData.get());
+    }
 
     // TODO: Upload the new version of the data
 }
@@ -516,7 +557,7 @@ void Application::computeCubeImageBox()
     if(explicitCubeImageBox)
         return;
 
-    auto cubeExtent = glm::vec3(cubeFile->getWidth(), cubeFile->getHeight(), cubeFile->getDepth());
+    auto cubeExtent = glm::vec3(xSlice.size, ySlice.size, zSlice.size);
     auto maxAxis = std::max(cubeExtent.x, std::max(cubeExtent.y, cubeExtent.z));
     auto cubeHalfExtent = cubeExtent * float(lengthScale * 0.5 / maxAxis);
 	cubeImageBox = AABox(-cubeHalfExtent, cubeHalfExtent);
@@ -534,9 +575,9 @@ void Application::raycast()
     auto device = computePlatform->getComputeDevice(0);
 
     // Compute the max number of samples
-    auto w = cubeFile->getWidth();
-    auto h = cubeFile->getHeight();
-    auto d = cubeFile->getDepth();
+    auto w = xSlice.size;
+    auto h = ySlice.size;
+    auto d = zSlice.size;
     maxNumberOfSamples = ceil(sqrt(w*w + h*h + d*d) * lengthSamplingFactor);
 
     // Acquire shared resources
@@ -551,7 +592,7 @@ void Application::raycast()
     kernel->setBufferArg(0, computeCubeBuffer);
     kernel->setBufferArg(1, computeVolumeColorBuffer);
 
-    // Pass the camera    
+    // Pass the camera
     for(int i = 0; i < 8; ++i)
         kernel->setFloat4Arg(2 + i, transformedFrustum[i]);
 
@@ -609,7 +650,7 @@ void Application::render3D()
     }
 
     volumeColorBuffer->resize(width, height);
-    
+
     // Recreate the compute color buffer
     if(recreate)
     {
@@ -791,4 +832,3 @@ void Application::onWindowEvent(const SDL_WindowEvent &event)
 }
 
 } // namespace SVR
-

@@ -19,6 +19,7 @@ inline size_t computeHeaderSize(size_t numberOfProperties)
 FitsFile::FitsFile(MemoryMappedFile *memoryFile)
     : memoryFile(memoryFile)
 {
+    position = memoryFile->getData();
 }
 
 FitsFile::~FitsFile()
@@ -79,9 +80,16 @@ FitsFile *FitsFile::open(const char *fileName, bool canWrite)
     auto memoryFile = MemoryMappedFile::open(fileName, canWrite);
     if(!memoryFile)
         return nullptr;
-    
+
     auto fits = new FitsFile(memoryFile);
     fits->readHeader();
+    // If we do not have an axis, read the next header.
+    if(fits->getPropertyIfAbsent("NAXIS", "0") == "0")
+    {
+        fits->headerProperties.clear();
+        fits->readHeader();
+    }
+
     fits->loadHeaderData();
     return fits;
 }
@@ -93,7 +101,7 @@ FitsFile *FitsFile::create(const char *fileName, FitsHeaderProperties properties
     auto memoryFile = MemoryMappedFile::create(fileName, headerSize + dataSize);
     if(!memoryFile)
         return nullptr;
-    
+
     auto fits = new FitsFile(memoryFile);
     fits->headerProperties = properties;
     fits->loadHeaderData();
@@ -102,6 +110,13 @@ FitsFile *FitsFile::create(const char *fileName, FitsHeaderProperties properties
     return fits;
 }
 
+std::string FitsFile::getPropertyIfAbsent(const std::string &name, const std::string &absentValue)
+{
+    auto it = headerProperties.find(name);
+    if(it == headerProperties.end())
+        return absentValue;
+    return it->second;
+}
 
 void FitsFile::close()
 {
@@ -110,7 +125,7 @@ void FitsFile::close()
 
 void FitsFile::readHeader()
 {
-    char *headerStart = memoryFile->getData();
+    char *headerStart = position;
     position = headerStart;
 
     for(;;)
@@ -219,4 +234,3 @@ void FitsFile::loadHeaderData()
 
 
 } // namespace SVR
-

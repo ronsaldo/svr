@@ -1,0 +1,4 @@
+-std=c++11
+-Iinclude
+-Icore/include
+-I/Library/Frameworks/SDL2.framework/Headers

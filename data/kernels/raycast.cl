@@ -30,16 +30,16 @@ float4 sampleVolume(image3d_t volume, sampler_t volumeSampler, float4 point, ima
 float3 rayBoxIntersection(float3 rayOrigin, float3 rayDirection, float3 rayInverseDirection, float3 boxMin, float3 boxMax)
 {
 	float3 boxBounds[2] = {
-		 boxMin, 
+		 boxMin,
 		 boxMax,
 	};
-	
+
 	float tmin, tmax, tymin, tymax, tzmin, tzmax;
 
 	int raySignX = (rayInverseDirection.x) < 0 ? 1 : 0;
 	int raySignY = (rayInverseDirection.y) < 0 ? 1 : 0;
 	int raySignZ = (rayInverseDirection.z) < 0 ? 1 : 0;
-		
+
 	tmin = (boxBounds[raySignX].x - rayOrigin.x) * rayInverseDirection.x;
 	tmax = (boxBounds[1-raySignX].x - rayOrigin.x) * rayInverseDirection.x;
 	tymin = (boxBounds[raySignY].y - rayOrigin.y) * rayInverseDirection.y;
@@ -62,19 +62,19 @@ float4 convertToCubeCoordinates(float3 point, float4 boxMin, float4 boxMax)
 	return result;
 }
 
-float4 integrate(__read_only image3d_t volume, float segmentLength, float4 startPoint, float4 endPoint, int minNumberOfSamples, int maxNumberOfSamples, float lengthSamplingFactor, float boxLength, float lengthScale, float4 cubeViewRegionMin, float4 cubeViewRegionMax, sampler_t cubeSampler, 
+float4 integrate(__read_only image3d_t volume, float segmentLength, float4 startPoint, float4 endPoint, int minNumberOfSamples, int maxNumberOfSamples, float lengthSamplingFactor, float boxLength, float lengthScale, float4 cubeViewRegionMin, float4 cubeViewRegionMax, sampler_t cubeSampler,
 image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMaxValue,
-    
+
     int averageSamples,
     float4 sampleColorIntensity
 )
 {
 	// Compute the number of samples and the step size to use.
 	float integrationLength = segmentLength;
-	int numberOfSteps = clamp((int)ceil(lengthSamplingFactor*integrationLength * (maxNumberOfSamples - 1) / boxLength),  minNumberOfSamples, maxNumberOfSamples); 
+	int numberOfSteps = clamp((int)ceil(lengthSamplingFactor*integrationLength * (maxNumberOfSamples - 1) / boxLength),  minNumberOfSamples, maxNumberOfSamples);
 	float scaleFactor = integrationLength;
 	float stepSize = 1.0 / (numberOfSteps - 1);
-	
+
 
 	// Endpoints for the Simpson's rule
 	float4 result = sampleColorIntensity*sampleVolume(volume, cubeSampler, startPoint, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
@@ -82,11 +82,12 @@ image1d_t colorMap, float invColorMapSize, float filterMinValue, float filterMax
 	// Sample the inner points
 	for(int i = 1; i < numberOfSteps-1; ++i) {
 		float4 point = mix(startPoint, endPoint, i*stepSize);
-		float factor = (i & 1) ? 4.0f : 2.0f; 
+		float factor = (i & 1) ? 4.0f : 2.0f;
 		result += factor*sampleColorIntensity*sampleVolume(volume, cubeSampler, point, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 	}
 	result += sampleColorIntensity*sampleVolume(volume, cubeSampler, endPoint, colorMap, invColorMapSize, filterMinValue, filterMaxValue);
 
+    //printf("Number of steps %d\n", numberOfSteps);
     if(averageSamples)
     	result *= stepSize  / 3.0f;
     else
@@ -113,7 +114,7 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
     float4 farTopLeft, float4 farTopRight, float4 farBottomLeft, float4 farBottomRight,
 
     // Cube parameters
-	float4 boxMin, float4 boxMax, 
+	float4 boxMin, float4 boxMax,
 	float4 cubeViewRegionMin, float4 cubeViewRegionMax,
     float lengthScale,
 
@@ -137,11 +138,11 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 	// Compute data from the cube.
 	float boxLength = length(boxMax - boxMin);
 	float4 boxExtent = (boxMax - boxMin);
-		
+
 	// Compute the viewed cube
 	float4 viewMin = cubeViewRegionMin*boxExtent + boxMin;
 	float4 viewMax = cubeViewRegionMax*boxExtent + boxMin;
-	
+
 	// Compute basic thread information.
 	int2 extent = (int2) (get_global_size(0), get_global_size(1));
 	int2 coord = (int2) (get_global_id(0), get_global_id(1));
@@ -158,7 +159,7 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
 	float3 rayInverseDirection = 1.0f / rayDirection;
     float rayMaxParameter = dot(rayTarget - rayOrigin, rayDirection);
 
-	// Compute the ray intersection points.	
+	// Compute the ray intersection points.
 	float3 intersection = rayBoxIntersection(rayOrigin, rayDirection, rayInverseDirection, viewMin.xyz, viewMax.xyz);
 	float4 color = (float4) (0.0, 0.0, 0.0, 1.0);
 	if(intersection.z == 1.0 && intersection.y >= 0.0)
@@ -166,13 +167,14 @@ __kernel void raycastVolume(__read_only image3d_t volume, __write_only image2d_t
         // Compute the start and end points in world space.
 		float3 startPoint = rayOrigin + rayDirection*max(intersection.x, 0.0f);
 		float3 endPoint = rayOrigin + rayDirection*min(intersection.y, rayMaxParameter);
-		
+
 		float4 startPointCube = convertToCubeCoordinates(startPoint, boxMin, boxMax);
 		float4 endPointCube = convertToCubeCoordinates(endPoint, boxMin, boxMax);
 		color = integrate(volume, length(endPoint - startPoint)/lengthScale, startPointCube, endPointCube, minNumberOfSamples, maxNumberOfSamples, lengthSamplingFactor, boxLength, lengthScale, cubeViewRegionMin, cubeViewRegionMax, cubeSampler, colorMap, invColorMapSize, filterMinValue, filterMaxValue,
         averageSamples, sampleColorIntensity);
+        //if(coord.x == 100 && coord.y == 100)
+        //    printf("color %f %f %f %f\n", color.x, color.y, color.z, color.w);
 	}
 
 	write_imagef(renderBuffer, coord,  pow(color, invGammaCorrectionFactor));
 }
-

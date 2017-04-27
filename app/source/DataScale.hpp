@@ -13,9 +13,9 @@ DECLARE_INTERFACE(DataScale)
  */
 struct DataScale: public Interface
 {
-    virtual void mapFitsIntoFits(FitsFile *input,  FitsFile *output) = 0;
+    virtual void mapFitsIntoFits(FitsFile *input,  FitsFile *output, SliceRange x=SliceRange(), SliceRange y=SliceRange(), SliceRange z=SliceRange()) = 0;
 
-    virtual void mapFitsIntoU8(FitsFile *input, uint8_t *output) = 0;
+    virtual void mapFitsIntoU8(FitsFile *input, uint8_t *output, SliceRange x=SliceRange(), SliceRange y=SliceRange(), SliceRange z=SliceRange()) = 0;
 
     virtual double mapValue(double value) = 0;
     virtual double unmapValue(double value) = 0;
@@ -29,14 +29,14 @@ template<typename AstronomyMapping>
 class AstronomyDataScale: public DataScale
 {
 public:
-    virtual void mapFitsIntoFits(FitsFile *input,  FitsFile *output)
+    virtual void mapFitsIntoFits(FitsFile *input,  FitsFile *output, SliceRange x=SliceRange(), SliceRange y=SliceRange(), SliceRange z=SliceRange())
     {
-        ::SVR::mapFitsIntoFits(mapping, input, output);
+        ::SVR::mapFitsIntoFits(mapping, input, output, x, y, z);
     }
 
-    virtual void mapFitsIntoU8(FitsFile *input, uint8_t *output)
+    virtual void mapFitsIntoU8(FitsFile *input, uint8_t *output, SliceRange x=SliceRange(), SliceRange y=SliceRange(), SliceRange z=SliceRange())
     {
-        ::SVR::mapFitsInto(mapping, input, output);
+        ::SVR::mapFitsInto(mapping, input, output, x, y, z);
     }
 
     virtual double mapValue(double value)
@@ -65,4 +65,3 @@ typedef AstronomyDataScale<ASinhMapping> ASinhDataScale;
 } // namespace SVR
 
 #endif //_SVR_DATASCALE_HPP_
-
